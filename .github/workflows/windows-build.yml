@@ -55,11 +55,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Publish installer UI (WPF)
-        run: |
-          dotnet publish AuraInstaller/AuraInstaller.csproj \
-            -c Release -r win-x64 --self-contained false \
-            /p:PublishSingleFile=true \
-            -o build/Installer
+        run: dotnet publish AuraInstaller/AuraInstaller.csproj -c Release -r win-x64 --self-contained false /p:PublishSingleFile=true -o build/Installer
 
       - name: Prepare package content
         shell: pwsh
