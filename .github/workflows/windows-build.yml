@@ -17,7 +17,7 @@ on:
 # ---------------------------------------------------------------------------
 
 env:
-  ZIP_NAME_TEMPLATE: Windows.zip   # If you use a pattern like MyGame-{version}.zip, change here
+  ZIP_NAME_TEMPLATE: Aura.zip   # If you use a pattern like MyGame-{version}.zip, change here
 
 jobs:
   windows:
@@ -42,7 +42,7 @@ jobs:
       - name: Download Unity build ZIP
         shell: pwsh
         run: |
-          $base = '${{ secrets.BUILD_BASE_URL }}'  # ex. https://cdn.example.com/builds
+          $base = "https://build.sealion.fr"  # ex. https://cdn.example.com/builds
           $ver  = '${{ steps.vars.outputs.version }}'
           $zip  = '${{ env.ZIP_NAME_TEMPLATE }}'
           $url  = "$base/$ver/$zip"       # final path = …/1.2.3/Windows.zip
