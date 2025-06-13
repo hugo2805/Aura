@@ -24,81 +24,72 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # 1 – Checkout workflow files (launcher, nuspec, etc.)
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2 – Extract version numbers from the GitHub Release tag (e.g. v1.2.3)
       - name: Parse version
         id: vars
         shell: bash
         run: |
           TAG="${GITHUB_REF_NAME}"
-          # strip leading “v” if present → 1.2.3
           VERSION=${TAG#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      # 3 – Download the Unity player you avez construit à la main
       - name: Download Unity build ZIP
         shell: pwsh
         run: |
-          $base = "https://build.sealion.fr"  # ex. https://cdn.example.com/builds
+          $base = "https://build.sealion.fr"
           $ver  = '${{ steps.vars.outputs.version }}'
           $zip  = '${{ env.ZIP_NAME_TEMPLATE }}'
-          $url  = "$base/$ver/$zip"       # final path = …/1.2.3/Windows.zip
+          $url  = "$base/$ver/$zip"
           Write-Host "Downloading $url…"
           Invoke-WebRequest -Uri $url -OutFile unity.zip -UseBasicParsing
 
-      # 4 – Extract ZIP into build/UnityPlayer
       - name: Extract Unity ZIP
         run: |
           7z x unity.zip -obuild/UnityPlayer
 
-      # 5 – Setup .NET SDK for the launcher
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      # 6 – Compile the WPF/console launcher (self‑contained false → lighter)
-      - name: Publish launcher
+      - name: Publish installer UI (WPF)
         run: |
-          dotnet publish Launcher/Launcher.csproj \
+          dotnet publish AuraInstaller/AuraInstaller.csproj \
             -c Release -r win-x64 --self-contained false \
             /p:PublishSingleFile=true \
-            -o build/Launcher
+            -o build/Installer
 
-      # 7 – Assemble everything in package/  (content for the NuGet .nupkg)
       - name: Prepare package content
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path package
-          Copy-Item -Recurse build/Launcher/*     package/
-          Copy-Item -Recurse build/UnityPlayer/*  package/
+          Copy-Item -Recurse build/Installer/*     package/
+          Copy-Item -Recurse build/UnityPlayer/*   package/
 
-      # 8 – NuGet pack (version = release tag without the leading v)
       - name: NuGet pack
         run: nuget pack MyUnityApp.nuspec -Version ${{ steps.vars.outputs.version }} -OutputDirectory .
 
-      # 9 – Install Squirrel CLI locally
       - name: Install Squirrel CLI
         run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
 
-      # 10 – Releasify (creates Setup.exe, RELEASES, delta/full .nupkg)
-      - name: Squirrel releasify
+      - name: Squirrel releasify with custom installer
         shell: pwsh
         run: |
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
-          & $squirrel.FullName --releasify MyUnityApp.${{ steps.vars.outputs.version }}.nupkg --releaseDir Releases
+          & $squirrel.FullName --releasify MyUnityApp.${{ steps.vars.outputs.version }}.nupkg \
+            --releaseDir Releases \
+            --setupExe AuraInstaller.exe \
+            --no-msi
 
-      # 11 – Attach artefacts to the *same* GitHub Release
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            Releases/Setup.exe
+            Releases/AuraInstaller.exe
             Releases/RELEASES
             Releases/*.nupkg
-          overwrite: true   # remplace si déjà présent
+          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
