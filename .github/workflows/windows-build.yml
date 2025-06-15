@@ -177,8 +177,8 @@ jobs:
         with:
           fail_on_unmatched_files: false
           files: |
-            Releases/**/*.nupkg
-            Releases/**/RELEASES*
-            Releases/**/AuraSetup.exe
+            Releases/AuraSetup.exe
+            Releases/RELEASES*
+            Releases/*.nupkg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
