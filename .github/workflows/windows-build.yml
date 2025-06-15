@@ -95,13 +95,13 @@ jobs:
       - name: Install Squirrel CLI
         run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
 
-      # 11 – Releasify: generate AuraInstaller.exe + RELEASES + delta patches
+      # 11 – Releasify: generate setup + RELEASES + delta patches
       - name: Squirrel releasify with custom installer
         shell: pwsh
         run: |
           $ver = '${{ steps.vars.outputs.version }}'
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
-          & $squirrel.FullName --releasify Aura.$ver.nupkg --releaseDir Releases --setupExe AuraInstaller.exe --no-msi
+          & $squirrel.FullName --releasify Aura.$ver.nupkg --releaseDir Releases --no-msi
 
       # 12 – Attach artefacts to the GitHub Release
       - name: Attach artefacts to GitHub Release
@@ -111,6 +111,6 @@ jobs:
           files: |
             Releases/*.nupkg
             Releases/RELEASES
-            Releases/AuraInstaller.exe
+            Releases/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
