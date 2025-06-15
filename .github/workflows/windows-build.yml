@@ -89,7 +89,7 @@ jobs:
             echo '    <description>AURA Unity app with custom WPF installer</description>'
             echo '  </metadata>'
             echo '  <files>'
-            echo '    <file src="package/**" target="" />'
+            echo '    <file src="package/**" target="lib/net6.0-windows" />'
             echo '  </files>'
             echo '</package>'
           } > Aura.nuspec
@@ -125,6 +125,6 @@ jobs:
           files: |
             Releases/**/*.nupkg
             Releases/**/RELEASES*
-            Releases/**/AuraSetup.exe
+            Releases/**/Setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
