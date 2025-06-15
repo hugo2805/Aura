@@ -116,6 +116,10 @@ jobs:
         run: |
           $ver = '${{ steps.vars.outputs.version }}'
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
+      
+          # Copie Setup.exe pour que Squirrel puisse le renommer en AuraSetup.exe
+          Copy-Item "$($squirrel.DirectoryName)\Setup.exe" .\AuraSetup.exe -Force
+      
           & $squirrel.FullName `
             --releasify Aura.$ver.nupkg `
             --releaseDir Releases `
@@ -123,7 +127,9 @@ jobs:
             --bootstrapperExe AuraSetup.exe `
             --exe AuraInstaller.exe `
             --verbose
+      
           Write-Host "Squirrel exit code: $LASTEXITCODE"
+
 
       - name: 🔎 Debug all build outputs
         shell: pwsh
