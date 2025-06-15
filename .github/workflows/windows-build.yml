@@ -108,7 +108,7 @@ jobs:
         run: |
           $ver = '${{ steps.vars.outputs.version }}'
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
-          & $squirrel.FullName --releasify Aura.$ver.nupkg --releaseDir Releases --no-msi --setupIcon=icon.ico
+          & $squirrel.FullName --releasify Aura.$ver.nupkg --releaseDir Releases --no-msi
           Get-ChildItem -Recurse Releases | Format-List
 
       # 12 – Debug Upload - Show release files
