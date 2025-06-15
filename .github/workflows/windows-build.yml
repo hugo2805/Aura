@@ -77,11 +77,11 @@ jobs:
           $exe = Get-ChildItem build/Installer -Recurse -Filter AuraInstaller.exe | Select-Object -First 1
           if (-not $exe) { throw "AuraInstaller.exe introuvable dans le ZIP !" }
 
-          # Copie EXE et PDB dans le sous-dossier framework
+          # Copy EXE and PDB into the framework sub‑folder
           Copy-Item $exe.FullName "package/$framework/" -Force
-          Copy-Item ($exe.FullName -replace '\.exe$','.pdb') "package/$framework/" -ErrorAction SilentlyContinue
+          Copy-Item ($exe.FullName -replace '\.exe$','\.pdb') "package/$framework/" -ErrorAction SilentlyContinue
 
-          # Les assets Unity restent dans leur dossier à part (pas inclus dans le .nupkg)
+          # Unity assets stay where they are (not inside the .nupkg)
 
       # 8 – Create Aura.nuspec on the fly (no heredoc, avoids YAML issues)
       - name: Create Aura.nuspec
@@ -104,7 +104,7 @@ jobs:
             echo '</package>'
           } > Aura.nuspec
 
-      # 8b – Ajout d'un README temporaire pour NuGet
+      # 8b – Temporary README for NuGet
       - name: Create README.md
         run: echo "AURA Unity app packaged with a custom WPF installer." > README.md
 
@@ -123,35 +123,27 @@ jobs:
           $ver = '${{ steps.vars.outputs.version }}'
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
 
-          # Nettoyage du dossier Releases
+          # Clean Releases folder
           Remove-Item -Recurse -Force Releases -ErrorAction Ignore
           New-Item -ItemType Directory -Path Releases
-
-          # Copie Setup.exe pour que Squirrel puisse le renommer en AuraSetup.exe
-          $setupPath = "$($squirrel.DirectoryName)\Setup.exe"
-          Write-Host "Chemin de Setup.exe: $setupPath"
-          Copy-Item $setupPath .\AuraSetup.exe -Force
 
           & $squirrel.FullName `
             --releasify Aura.$ver.nupkg `
             --releaseDir Releases `
             --no-msi `
-            --bootstrapperExe AuraSetup.exe `
             --exe AuraInstaller.exe `
             --verbose 2>&1
           $exit = $LASTEXITCODE
           Write-Host "Squirrel exit code: $exit"
 
-      # 12 – S'assurer que le bootstrapper est bien dans Releases
-      - name: 📦 Copie AuraSetup.exe dans Releases
+      # 12 – Rename the generated bootstrapper
+      - name: 📦 Rename Setup.exe → AuraSetup.exe
         shell: pwsh
         run: |
-          Copy-Item .\AuraSetup.exe Releases\AuraSetup.exe -Force
-          Write-Host "✅ AuraSetup.exe copié dans Releases/"
+          Copy-Item Releases\Setup.exe Releases\AuraSetup.exe -Force
+          Write-Host "✅ AuraSetup.exe copié depuis Releases/Setup.exe"
 
-      - name: Lister les fichiers dans Releases
-        run: ls -R Releases
-
+      # 13 – Validate output
       - name: Vérification des fichiers Squirrel
         shell: pwsh
         run: |
@@ -167,15 +159,13 @@ jobs:
           }
           Get-ChildItem -Recurse Releases | Format-List
 
+      # 14 – Debug build outputs
       - name: 🔎 Debug build outputs
         shell: pwsh
         run: |
           Get-ChildItem -Recurse | Where-Object { $_.Name -like '*.exe' -or $_.Name -like '*.nupkg' }
 
-      - name: Debug Upload - Print files
-        run: ls -R Releases
-
-      # 13 – Attach artefacts to the GitHub Release
+      # 15 – Attach artefacts to the GitHub Release
       - name: Attach artefacts to GitHub Release
         if: github.event_name == 'release' && github.event.action == 'published'
         uses: softprops/action-gh-release@v2
