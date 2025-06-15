@@ -97,14 +97,19 @@ jobs:
             echo '    <description>AURA Unity app with custom WPF installer</description>'
             echo '  </metadata>'
             echo '  <files>'
-            echo '    <file src="package/**" target="" />'
+            echo '    <file src="package/**" target="lib" />'
+            echo '    <file src="README.md" target="" />'
             echo '  </files>'
             echo '</package>'
           } > Aura.nuspec
 
+      # 8b – Ajout d'un README temporaire pour NuGet
+      - name: Create README.md
+        run: echo "AURA Unity app packaged with a custom WPF installer." > README.md
+
       # 9 – Create the .nupkg
       - name: NuGet pack
-        run: nuget pack Aura.nuspec -Version ${{ steps.vars.outputs.version }} -OutputDirectory .
+        run: nuget pack Aura.nuspec -Version ${{ steps.vars.outputs.version }} -OutputDirectory . -NoDefaultExcludes
 
       # 10 – Install Squirrel CLI
       - name: Install Squirrel CLI
@@ -130,6 +135,12 @@ jobs:
       
           Write-Host "Squirrel exit code: $LASTEXITCODE"
 
+      # 11b – Vérification des fichiers Squirrel générés
+      - name: Vérification des fichiers Squirrel
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "Releases/RELEASES")) { throw "Fichier RELEASES manquant" }
+          if (-not (Test-Path "Releases/AuraSetup.exe")) { throw "AuraSetup.exe manquant" }
 
       - name: 🔎 Debug all build outputs
         shell: pwsh
