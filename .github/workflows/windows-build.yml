@@ -125,6 +125,10 @@ jobs:
             --verbose
           Write-Host "Squirrel exit code: $LASTEXITCODE"
 
+      - name: 🔎 Debug all build outputs
+        run: Get-ChildItem -Recurse -Filter *.exe,*.nupkg
+        shell: pwsh
+
       # 12 – Debug Upload - Show release files
       - name: Debug Upload - Print files
         run: ls -R Releases
