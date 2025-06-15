@@ -71,8 +71,11 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path package
-          Copy-Item -Recurse build/Installer/*   package/
+          # Copie tout ce qu’il y a dans le build Unity
           Copy-Item -Recurse build/UnityPlayer/* package/
+          # Copie tout le contenu du dossier net6.0-windows tel quel
+          Copy-Item -Recurse build/Installer/net6.0-windows/* package/
+
 
       # 8 – Create Aura.nuspec on the fly (no heredoc, avoids YAML issues)
       - name: Create Aura.nuspec
@@ -100,7 +103,7 @@ jobs:
 
       # 10 – Install Squirrel CLI
       - name: Install Squirrel CLI
-        run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
+        run: nuget install squirrel.windows -OutputDirectory tools -Verbosity 
 
       # 11 – Releasify: generate setup + RELEASES + delta patches
       - name: Squirrel releasify with custom installer
