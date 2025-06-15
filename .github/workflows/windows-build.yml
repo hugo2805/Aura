@@ -73,15 +73,16 @@ jobs:
           New-Item -ItemType Directory -Force -Path package
           # Copy Unity build output (flat)
           Copy-Item -Recurse build/UnityPlayer/* package/
-          # Copy *everything* from AuraInstaller publish tree
-          Copy-Item -Recurse build/Installer/net6.0-windows/* package/
+          # Copy *everything* from AuraInstaller ZIP (the .exe is now at the root)
+          Copy-Item -Recurse build/Installer/* package/
 
-          # ➜ Trouve l'exécutable AuraInstaller.exe quel que soit le sous-dossier (win‑x64, win‑x86…)
-          $exe = Get-ChildItem build/Installer/net6.0-windows -Recurse -Filter AuraInstaller.exe | Select-Object -First 1
+          # ➜ Locate AuraInstaller.exe (root of the zip or any sub‑folder)
+          $exe = Get-ChildItem build/Installer -Recurse -Filter AuraInstaller.exe | Select-Object -First 1
           if (-not $exe) { throw "AuraInstaller.exe introuvable dans le ZIP !" }
-          Copy-Item $exe.FullName package/
+          # Ensure the executable is present at the package root
+          Copy-Item $exe.FullName package/ -Force
 
-      # 8 – Create Aura.nuspec on the fly (no heredoc, avoids YAML issues) – Create Aura.nuspec on the fly (no heredoc, avoids YAML issues)
+      # 8 – Create Aura.nuspec on the fly (no heredoc, avoids YAML issues)
       - name: Create Aura.nuspec
         shell: bash
         run: |
