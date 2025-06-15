@@ -102,15 +102,20 @@ jobs:
           $ver = '${{ steps.vars.outputs.version }}'
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
           & $squirrel.FullName --releasify Aura.$ver.nupkg --releaseDir Releases --no-msi
+          Get-ChildItem -Recurse Releases | Format-List
 
-      # 12 – Attach artefacts to the GitHub Release
+      # 12 – Debug Upload - Show release files
+      - name: Debug Upload - Print files
+        run: ls -R Releases
+
+      # 13 – Attach artefacts to the GitHub Release
       - name: Attach artefacts to GitHub Release
         if: github.event_name == 'release' && github.event.action == 'published'
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            Releases/*.nupkg
-            Releases/RELEASES
-            Releases/*.exe
+            Releases/**/*.nupkg
+            Releases/**/RELEASES*
+            Releases/**/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
