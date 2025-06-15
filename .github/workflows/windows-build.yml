@@ -73,11 +73,11 @@ jobs:
           $framework = "net6.0-windows"
           New-Item -ItemType Directory -Force -Path "package/$framework"
 
-          # ➜ Locate AuraInstaller.exe (root of the zip or any sub‑folder)
+          # ➔ Locate AuraInstaller.exe (root of the zip or any sub​‑folder)
           $exe = Get-ChildItem build/Installer -Recurse -Filter AuraInstaller.exe | Select-Object -First 1
           if (-not $exe) { throw "AuraInstaller.exe introuvable dans le ZIP !" }
 
-          # Copy EXE and PDB into the framework sub‑folder
+          # Copy EXE and PDB into the framework sub​‑folder
           Copy-Item $exe.FullName "package/$framework/" -Force
           Copy-Item ($exe.FullName -replace '\.exe$','\.pdb') "package/$framework/" -ErrorAction SilentlyContinue
 
@@ -128,15 +128,22 @@ jobs:
           Remove-Item -Recurse -Force Releases -ErrorAction Ignore
           New-Item -ItemType Directory -Path Releases | Out-Null
 
-          & $squirrel.FullName `
-            --releasify Aura.$ver.nupkg `
-            --releaseDir Releases `
-            --no-msi `
-            --bootstrapperExe AuraSetup.exe `
-            --exe AuraInstaller.exe `
-            --verbose 2>&1
+          # Exécution et log détaillé
+          $args = @(
+            "--releasify", "Aura.$ver.nupkg",
+            "--releaseDir", "Releases",
+            "--no-msi",
+            "--bootstrapperExe", "AuraSetup.exe",
+            "--exe", "AuraInstaller.exe",
+            "--verbose"
+          )
+
+          Write-Host ">> Running: $($squirrel.FullName) $($args -join ' ')"
+          & $squirrel.FullName @args 2>&1 | Tee-Object -Variable output | Write-Output
 
           if ($LASTEXITCODE -ne 0) {
+            Write-Host ">> Output from Squirrel.exe:"
+            $output | Write-Host
             throw "Squirrel releasify failed with exit code $LASTEXITCODE"
           }
 
