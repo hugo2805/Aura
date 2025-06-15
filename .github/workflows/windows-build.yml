@@ -70,17 +70,18 @@ jobs:
       - name: Prepare package content
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path package
-          # Copy Unity build output (flat)
-          Copy-Item -Recurse build/UnityPlayer/* package/
-          # Copy *everything* from AuraInstaller ZIP (the .exe is now at the root)
-          Copy-Item -Recurse build/Installer/* package/
+          $framework = "net6.0-windows"
+          New-Item -ItemType Directory -Force -Path "package/$framework"
 
           # ➜ Locate AuraInstaller.exe (root of the zip or any sub‑folder)
           $exe = Get-ChildItem build/Installer -Recurse -Filter AuraInstaller.exe | Select-Object -First 1
           if (-not $exe) { throw "AuraInstaller.exe introuvable dans le ZIP !" }
-          # Ensure the executable is present at the package root
-          Copy-Item $exe.FullName package/ -Force
+
+          # Copie EXE et PDB dans le sous-dossier framework
+          Copy-Item $exe.FullName "package/$framework/" -Force
+          Copy-Item ($exe.FullName -replace '\.exe$','.pdb') "package/$framework/" -ErrorAction SilentlyContinue
+
+          # Les assets Unity restent dans leur dossier à part (pas inclus dans le .nupkg)
 
       # 8 – Create Aura.nuspec on the fly (no heredoc, avoids YAML issues)
       - name: Create Aura.nuspec
@@ -97,7 +98,7 @@ jobs:
             echo '    <description>AURA Unity app with custom WPF installer</description>'
             echo '  </metadata>'
             echo '  <files>'
-            echo '    <file src="package/**" target="lib" />'
+            echo '    <file src="package/net6.0-windows/**" target="lib/net6.0-windows" />'
             echo '    <file src="README.md" target="" />'
             echo '  </files>'
             echo '</package>'
