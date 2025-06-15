@@ -138,22 +138,17 @@ jobs:
             --bootstrapperExe AuraSetup.exe `
             --exe AuraInstaller.exe `
             --verbose 2>&1
+          $exit = $LASTEXITCODE
+          Write-Host "Squirrel exit code: $exit"
 
-          Write-Host "Squirrel exit code: $LASTEXITCODE"
-
-      # 🔁 Forcer la présence de AuraSetup.exe à la racine
-      - name: 🔁 Renommer AuraSetup.exe si trouvé
+      # 12 – S'assurer que le bootstrapper est bien dans Releases
+      - name: 📦 Copie AuraSetup.exe dans Releases
         shell: pwsh
         run: |
-          $exe = Get-ChildItem -Recurse Releases -Filter AuraSetup.exe | Select-Object -First 1
-          if ($exe) {
-            Copy-Item $exe.FullName Releases/AuraSetup.exe -Force
-            Write-Host "✅ AuraSetup.exe copié à la racine de Releases/"
-          } else {
-            Write-Host "❌ AuraSetup.exe introuvable"
-          }
+          Copy-Item .\AuraSetup.exe Releases\AuraSetup.exe -Force
+          Write-Host "✅ AuraSetup.exe copié dans Releases/"
 
-      - name: 🔍 Lister les fichiers dans Releases
+      - name: Lister les fichiers dans Releases
         run: ls -R Releases
 
       - name: Vérification des fichiers Squirrel
@@ -171,7 +166,7 @@ jobs:
           }
           Get-ChildItem -Recurse Releases | Format-List
 
-      - name: 🔎 Debug all build outputs
+      - name: 🔎 Debug build outputs
         shell: pwsh
         run: |
           Get-ChildItem -Recurse | Where-Object { $_.Name -like '*.exe' -or $_.Name -like '*.nupkg' }
