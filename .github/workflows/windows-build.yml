@@ -1,5 +1,5 @@
 # GitHub Actions workflow — package Aura with Squirrel and a custom WPF installer
-# Trigger: runs whenever a GitHub Release is *published* (tag vX.Y.Z)
+# Trigger: runs whenever a GitHub Release is *published* (tag vX.Y.Z)
 
 name: Package & Release (Windows)
 
@@ -141,11 +141,21 @@ jobs:
 
           Write-Host "Squirrel exit code: $LASTEXITCODE"
 
-      # 11a – Lister les fichiers dans Releases pour déboguer
+      # 🔁 Forcer la présence de AuraSetup.exe à la racine
+      - name: 🔁 Renommer AuraSetup.exe si trouvé
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Recurse Releases -Filter AuraSetup.exe | Select-Object -First 1
+          if ($exe) {
+            Copy-Item $exe.FullName Releases/AuraSetup.exe -Force
+            Write-Host "✅ AuraSetup.exe copié à la racine de Releases/"
+          } else {
+            Write-Host "❌ AuraSetup.exe introuvable"
+          }
+
       - name: 🔍 Lister les fichiers dans Releases
         run: ls -R Releases
 
-      # 11b – Vérification des fichiers Squirrel générés
       - name: Vérification des fichiers Squirrel
         shell: pwsh
         run: |
@@ -166,7 +176,6 @@ jobs:
         run: |
           Get-ChildItem -Recurse | Where-Object { $_.Name -like '*.exe' -or $_.Name -like '*.nupkg' }
 
-      # 12 – Debug Upload - Show release files
       - name: Debug Upload - Print files
         run: ls -R Releases
 
@@ -177,8 +186,6 @@ jobs:
         with:
           fail_on_unmatched_files: false
           files: |
-            Releases/AuraSetup.exe
-            Releases/RELEASES*
-            Releases/*.nupkg
+            Releases/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
