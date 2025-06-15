@@ -119,38 +119,38 @@ jobs:
       - name: Squirrel releasify with custom installer
         shell: pwsh
         run: |
-          $ver = '${{ steps.vars.outputs.version }}'
+          $ver      = '${{ steps.vars.outputs.version }}'
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
 
           # Nettoyage du dossier Releases
           Remove-Item -Recurse -Force Releases -ErrorAction Ignore
           New-Item -ItemType Directory -Path Releases
 
-          # Copie Setup.exe pour que Squirrel puisse le renommer en AuraSetup.exe
-          $setupPath = "$($squirrel.DirectoryName)\Setup.exe"
-          Write-Host "Chemin de Setup.exe: $setupPath"
-          Copy-Item $setupPath .\AuraSetup.exe -Force
+          # Prépare un bootstrapper renommé (AuraSetup.exe) à partir du stub Setup.exe
+          $stubPath      = "$($squirrel.DirectoryName)\Setup.exe"
+          $bootstrapName = "AuraSetup.exe"
+          Copy-Item $stubPath $bootstrapName -Force
 
           & $squirrel.FullName `
             --releasify Aura.$ver.nupkg `
             --releaseDir Releases `
             --no-msi `
-            --bootstrapperExe AuraSetup.exe `
+            --bootstrapperExe $bootstrapName `
             --exe AuraInstaller.exe `
             --verbose 2>&1
           $exit = $LASTEXITCODE
           Write-Host "Squirrel exit code: $exit"
 
-      # 12 – S'assurer que le bootstrapper est bien dans Releases
-      - name: 📦 Copie AuraSetup.exe dans Releases
+      # 12 – (Optionnel) Copier le bootstrapper final à la racine pour inspection rapide
+      - name: Copier AuraSetup.exe final à la racine
         shell: pwsh
         run: |
-          Copy-Item .\AuraSetup.exe Releases\AuraSetup.exe -Force
-          Write-Host "✅ AuraSetup.exe copié dans Releases/"
+          if (Test-Path "Releases/AuraSetup.exe") {
+            Copy-Item Releases/AuraSetup.exe ./AuraSetup.exe -Force
+            Write-Host "✅ AuraSetup.exe final copié à la racine"
+          }
 
-      - name: Lister les fichiers dans Releases
-        run: ls -R Releases
-
+      # 13 – Vérification des fichiers Squirrel
       - name: Vérification des fichiers Squirrel
         shell: pwsh
         run: |
@@ -166,15 +166,13 @@ jobs:
           }
           Get-ChildItem -Recurse Releases | Format-List
 
+      # 14 – Debug (affiche les binaires principaux)
       - name: 🔎 Debug build outputs
         shell: pwsh
         run: |
           Get-ChildItem -Recurse | Where-Object { $_.Name -like '*.exe' -or $_.Name -like '*.nupkg' }
 
-      - name: Debug Upload - Print files
-        run: ls -R Releases
-
-      # 13 – Attach artefacts to the GitHub Release
+      # 15 – Attach artefacts to the GitHub Release
       - name: Attach artefacts to GitHub Release
         if: github.event_name == 'release' && github.event.action == 'published'
         uses: softprops/action-gh-release@v2
