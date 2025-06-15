@@ -71,11 +71,12 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path package
-          # Copie tout ce qu’il y a dans le build Unity
+          # Copy all Unity build files
           Copy-Item -Recurse build/UnityPlayer/* package/
-          # Copie tout le contenu du dossier net6.0-windows tel quel
+          # Copy all net6.0-windows installer files
           Copy-Item -Recurse build/Installer/net6.0-windows/* package/
-
+          # Ensure executable is present for Squirrel
+          Copy-Item build/Installer/net6.0-windows/AuraInstaller.exe package/
 
       # 8 – Create Aura.nuspec on the fly (no heredoc, avoids YAML issues)
       - name: Create Aura.nuspec
@@ -111,9 +112,14 @@ jobs:
         run: |
           $ver = '${{ steps.vars.outputs.version }}'
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
-          # Generate a bootstrapper named AuraSetup.exe
-          & $squirrel.FullName --releasify Aura.$ver.nupkg --releaseDir Releases --no-msi --bootstrapperExe AuraSetup.exe --verbose
-          Get-ChildItem -Recurse Releases | Format-List
+          & $squirrel.FullName `
+            --releasify Aura.$ver.nupkg `
+            --releaseDir Releases `
+            --no-msi `
+            --bootstrapperExe AuraSetup.exe `
+            --exe AuraInstaller.exe `
+            --verbose
+          Write-Host "Squirrel exit code: $LASTEXITCODE"
 
       # 12 – Debug Upload - Show release files
       - name: Debug Upload - Print files
