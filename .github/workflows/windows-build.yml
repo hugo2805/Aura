@@ -120,52 +120,48 @@ jobs:
       - name: Squirrel releasify with custom installer
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $ver = '${{ steps.vars.outputs.version }}'
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
 
           # Clean Releases folder
           Remove-Item -Recurse -Force Releases -ErrorAction Ignore
-          New-Item -ItemType Directory -Path Releases
+          New-Item -ItemType Directory -Path Releases | Out-Null
 
           & $squirrel.FullName `
             --releasify Aura.$ver.nupkg `
             --releaseDir Releases `
             --no-msi `
+            --bootstrapperExe AuraSetup.exe `
             --exe AuraInstaller.exe `
             --verbose 2>&1
-          $exit = $LASTEXITCODE
-          Write-Host "Squirrel exit code: $exit"
 
-      # 12 – Rename the generated bootstrapper
-      - name: 📦 Rename Setup.exe → AuraSetup.exe
-        shell: pwsh
-        run: |
-          Copy-Item Releases\Setup.exe Releases\AuraSetup.exe -Force
-          Write-Host "✅ AuraSetup.exe copié depuis Releases/Setup.exe"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Squirrel releasify failed with exit code $LASTEXITCODE"
+          }
 
-      # 13 – Validate output
+      # 12 – Validate output
       - name: Vérification des fichiers Squirrel
         shell: pwsh
         run: |
           if (-not (Test-Path "Releases/RELEASES")) {
             Write-Host "⚠️ Fichier RELEASES manquant"
-          } else {
-            Write-Host "✅ Fichier RELEASES trouvé"
+            Exit 1
           }
           if (-not (Test-Path "Releases/AuraSetup.exe")) {
             Write-Host "⚠️ AuraSetup.exe manquant"
-          } else {
-            Write-Host "✅ AuraSetup.exe trouvé"
+            Exit 1
           }
+          Write-Host "✅ Tous les artefacts Squirrel sont présents"
           Get-ChildItem -Recurse Releases | Format-List
 
-      # 14 – Debug build outputs
+      # 13 – Debug build outputs
       - name: 🔎 Debug build outputs
         shell: pwsh
         run: |
           Get-ChildItem -Recurse | Where-Object { $_.Name -like '*.exe' -or $_.Name -like '*.nupkg' }
 
-      # 15 – Attach artefacts to the GitHub Release
+      # 14 – Attach artefacts to the GitHub Release
       - name: Attach artefacts to GitHub Release
         if: github.event_name == 'release' && github.event.action == 'published'
         uses: softprops/action-gh-release@v2
