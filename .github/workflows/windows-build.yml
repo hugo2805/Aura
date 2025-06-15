@@ -126,10 +126,9 @@ jobs:
           Write-Host "Squirrel exit code: $LASTEXITCODE"
 
       - name: 🔎 Debug all build outputs
-        run: |
-        Get-ChildItem -Recurse -Filter *.exe
-        Get-ChildItem -Recurse -Filter *.nupkg
         shell: pwsh
+        run: |
+          Get-ChildItem -Recurse | Where-Object { $_.Name -like '*.exe' -or $_.Name -like '*.nupkg' }
 
       # 12 – Debug Upload - Show release files
       - name: Debug Upload - Print files
