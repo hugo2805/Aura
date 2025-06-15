@@ -1,5 +1,5 @@
-# GitHub Actions workflow — package a manually built Unity player hosted off‑site, then create an installer with Squirrel
-# Trigger: when you publish a GitHub Release (type = published)
+# GitHub Actions workflow — build package with Squirrel using a manually uploaded Unity ZIP and **AuraInstaller.exe**
+# Trigger: every time a GitHub Release is **published** (tag vX.Y.Z)
 
 name: Package & Release (Windows)
 
@@ -8,78 +8,103 @@ on:
     types: [published]
 
 # ---------------------------------------------------------------------------
-# Required secrets:
-#   BUILD_BASE_URL   – Base URL where your zipped Unity builds live, e.g.
-#                      https://cdn.example.com/builds  (no trailing slash)
-#   GITHUB_TOKEN     – Provided automatically by GitHub (don’t touch)
-# Optional secrets if your storage needs auth (e.g. AWS):
-#   STORAGE_ACCESS_KEY / STORAGE_SECRET_KEY … then adapt the download step
+# Secrets requis :
+#   BUILD_BASE_URL  → URL racine de tes ZIP Unity (ex : https://build.sealion.fr)
+#   GITHUB_TOKEN    → disponible automatiquement
 # ---------------------------------------------------------------------------
 
 env:
-  ZIP_NAME_TEMPLATE: Aura.zip   # If you use a pattern like MyGame-{version}.zip, change here
+  ZIP_NAME_TEMPLATE: Aura.zip   # nom de ton build Unity zippé
 
 jobs:
   windows:
     runs-on: windows-latest
 
     steps:
+      # 1 – Checkout du dépôt
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 2 – Extraire le numéro de version depuis le tag (v1.2.3 → 1.2.3)
       - name: Parse version
         id: vars
         shell: bash
         run: |
           TAG="${GITHUB_REF_NAME}"
           VERSION=${TAG#v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+      # 3 – Télécharger ton build Unity compressé
       - name: Download Unity build ZIP
         shell: pwsh
         run: |
-          $base = "https://build.sealion.fr"
+          $base = '${{ secrets.BUILD_BASE_URL }}'     # ex : https://build.sealion.fr
           $ver  = '${{ steps.vars.outputs.version }}'
           $zip  = '${{ env.ZIP_NAME_TEMPLATE }}'
           $url  = "$base/$ver/$zip"
           Write-Host "Downloading $url…"
           Invoke-WebRequest -Uri $url -OutFile unity.zip -UseBasicParsing
 
+      # 4 – Extraire le ZIP
       - name: Extract Unity ZIP
-        run: |
-          7z x unity.zip -obuild/UnityPlayer
+        run: 7z x unity.zip -obuild/UnityPlayer
 
+      # 5 – Préparer le SDK .NET pour compiler AuraInstaller (WPF)
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      - name: Publish installer UI (WPF)
+      # 6 – Compiler l’installeur visuel (exécutable unique)
+      - name: Publish AuraInstaller (WPF)
         run: dotnet publish AuraInstaller/AuraInstaller.csproj -c Release -r win-x64 --self-contained false /p:PublishSingleFile=true -o build/Installer
 
+      # 7 – Rassembler tout ce qui sera packagé
       - name: Prepare package content
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path package
-          Copy-Item -Recurse build/Installer/*     package/
-          Copy-Item -Recurse build/UnityPlayer/*   package/
+          Copy-Item -Recurse build/Installer/*   package/
+          Copy-Item -Recurse build/UnityPlayer/* package/
 
+      # 8 – Générer le manifest NuGet (.nuspec) à la volée
+      - name: Create Aura.nuspec
+        shell: pwsh
+        run: |
+          $ver = '${{ steps.vars.outputs.version }}'
+          @"
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>Aura</id>
+    <version>$ver</version>
+    <authors>Sealion</authors>
+    <description>AURA – Unity app + custom installer</description>
+  </metadata>
+  <files>
+    <file src="package\\**\\*.*" target="lib\\net6.0-windows" />
+  </files>
+</package>
+"@ | Set-Content Aura.nuspec -Encoding utf8
+
+      # 9 – Créer le .nupkg
       - name: NuGet pack
-        run: nuget pack MyUnityApp.nuspec -Version ${{ steps.vars.outputs.version }} -OutputDirectory .
+        run: nuget pack Aura.nuspec -Version ${{ steps.vars.outputs.version }} -OutputDirectory .
 
+      # 10 – Installer Squirrel CLI
       - name: Install Squirrel CLI
         run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
 
+      # 11 – Releasify : génère AuraInstaller.exe + RELEASES + delta patches
       - name: Squirrel releasify with custom installer
         shell: pwsh
         run: |
+          $ver = '${{ steps.vars.outputs.version }}'
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
-          & $squirrel.FullName --releasify MyUnityApp.${{ steps.vars.outputs.version }}.nupkg \
-            --releaseDir Releases \
-            --setupExe AuraInstaller.exe \
-            --no-msi
+          & $squirrel.FullName --releasify Aura.$ver.nupkg --releaseDir Releases --setupExe AuraInstaller.exe --no-msi
 
-      - name: Attach to GitHub Release
+      # 12 – Publier les artefacts dans la Release GitHub
+      - name: Attach artefacts to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
