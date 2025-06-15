@@ -125,6 +125,6 @@ jobs:
           files: |
             Releases/**/*.nupkg
             Releases/**/RELEASES*
-            Releases/**/Setup.exe
+            Releases/**/AuraSetup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
