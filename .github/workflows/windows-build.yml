@@ -105,12 +105,12 @@ jobs:
 
       # 12 – Attach artefacts to the GitHub Release
       - name: Attach artefacts to GitHub Release
+        if: github.event_name == 'release' && github.event.action == 'published'
         uses: softprops/action-gh-release@v2
         with:
           files: |
             Releases/*.nupkg
             Releases/RELEASES
-            Releases/Setup.exe
             Releases/AuraInstaller.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
