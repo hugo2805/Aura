@@ -70,22 +70,23 @@ jobs:
       # 8 – Générer le manifest NuGet (.nuspec) à la volée
       - name: Create Aura.nuspec
         shell: pwsh
-        run: |
-          $ver = '${{ steps.vars.outputs.version }}'
-          @"
-<?xml version="1.0"?>
+        run: >
+          $ver = '${{ steps.vars.outputs.version }}';
+          $xml = @"
+<?xml version=`"1.0`"?>
 <package>
   <metadata>
     <id>Aura</id>
     <version>$ver</version>
     <authors>Sealion</authors>
-    <description>AURA – Unity app + custom installer</description>
+    <description>AURA – Unity app + custom installer</description>
   </metadata>
   <files>
-    <file src="package\\**\\*.*" target="lib\\net6.0-windows" />
+    <file src=`"package\\**\\*.*`" target=`"lib\\net6.0-windows`" />
   </files>
 </package>
-"@ | Set-Content Aura.nuspec -Encoding utf8
+"@;
+          Set-Content -Path Aura.nuspec -Value $xml -Encoding utf8
 
       # 9 – Créer le .nupkg
       - name: NuGet pack
