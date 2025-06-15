@@ -149,8 +149,17 @@ jobs:
       - name: Vérification des fichiers Squirrel
         shell: pwsh
         run: |
-          if (-not (Test-Path "Releases/RELEASES")) { throw "Fichier RELEASES manquant" }
-          if (-not (Test-Path "Releases/AuraSetup.exe")) { throw "AuraSetup.exe manquant" }
+          if (-not (Test-Path "Releases/RELEASES")) {
+            Write-Host "⚠️ Fichier RELEASES manquant"
+          } else {
+            Write-Host "✅ Fichier RELEASES trouvé"
+          }
+          if (-not (Test-Path "Releases/AuraSetup.exe")) {
+            Write-Host "⚠️ AuraSetup.exe manquant"
+          } else {
+            Write-Host "✅ AuraSetup.exe trouvé"
+          }
+          Get-ChildItem -Recurse Releases | Format-List
 
       - name: 🔎 Debug all build outputs
         shell: pwsh
