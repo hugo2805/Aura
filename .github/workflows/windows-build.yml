@@ -67,25 +67,35 @@ jobs:
           Copy-Item -Recurse build/Installer/*   package/
           Copy-Item -Recurse build/UnityPlayer/* package/
 
-      # 8 – Create Aura.nuspec on the fly (bash heredoc to avoid YAML quoting issues)
+      # 8 – Create Aura.nuspec on the fly (no heredoc, avoids YAML issues)
       - name: Create Aura.nuspec
         shell: bash
         run: |
           VER="${{ steps.vars.outputs.version }}"
-          cat > Aura.nuspec <<EOF
-<?xml version="1.0"?>
-<package>
-  <metadata>
-    <id>Aura</id>
-    <version>${VER}</version>
-    <authors>Sealion</authors>
-    <description>AURA – Unity app with custom WPF installer</description>
-  </metadata>
-  <files>
-    <file src="package\\**\\*.*" target="lib\\net6.0-windows" />
-  </files>
-</package>
-EOF
+          printf '%s
+' "<?xml version=\"1.0\"?>" > Aura.nuspec
+          printf '%s
+' "<package>" >> Aura.nuspec
+          printf '%s
+' "  <metadata>" >> Aura.nuspec
+          printf '%s
+' "    <id>Aura</id>" >> Aura.nuspec
+          printf '%s
+' "    <version>${VER}</version>" >> Aura.nuspec
+          printf '%s
+' "    <authors>Sealion</authors>" >> Aura.nuspec
+          printf '%s
+' "    <description>AURA Unity app with custom WPF installer</description>" >> Aura.nuspec
+          printf '%s
+' "  </metadata>" >> Aura.nuspec
+          printf '%s
+' "  <files>" >> Aura.nuspec
+          printf '%s
+' "    <file src=\"package\**\*.*\" target=\"lib\net6.0-windows\" />" >> Aura.nuspec
+          printf '%s
+' "  </files>" >> Aura.nuspec
+          printf '%s
+' "</package>" >> Aura.nuspec
 
       # 9 – Create the .nupkg
       - name: NuGet pack
