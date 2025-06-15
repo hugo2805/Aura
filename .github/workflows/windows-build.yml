@@ -103,7 +103,7 @@ jobs:
 
       # 10 – Install Squirrel CLI
       - name: Install Squirrel CLI
-        run: nuget install squirrel.windows -OutputDirectory tools -Verbosity 
+        run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
 
       # 11 – Releasify: generate setup + RELEASES + delta patches
       - name: Squirrel releasify with custom installer
