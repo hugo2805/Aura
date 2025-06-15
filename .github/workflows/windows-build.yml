@@ -108,9 +108,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            Releases/AuraInstaller.exe
-            Releases/RELEASES
             Releases/*.nupkg
-          overwrite: true
+            Releases/RELEASES
+            Releases/Setup.exe
+            Releases/AuraInstaller.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
