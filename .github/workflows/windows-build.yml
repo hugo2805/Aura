@@ -72,30 +72,20 @@ jobs:
         shell: bash
         run: |
           VER="${{ steps.vars.outputs.version }}"
-          printf '%s
-' "<?xml version=\"1.0\"?>" > Aura.nuspec
-          printf '%s
-' "<package>" >> Aura.nuspec
-          printf '%s
-' "  <metadata>" >> Aura.nuspec
-          printf '%s
-' "    <id>Aura</id>" >> Aura.nuspec
-          printf '%s
-' "    <version>${VER}</version>" >> Aura.nuspec
-          printf '%s
-' "    <authors>Sealion</authors>" >> Aura.nuspec
-          printf '%s
-' "    <description>AURA Unity app with custom WPF installer</description>" >> Aura.nuspec
-          printf '%s
-' "  </metadata>" >> Aura.nuspec
-          printf '%s
-' "  <files>" >> Aura.nuspec
-          printf '%s
-' "    <file src=\"package\**\*.*\" target=\"lib\net6.0-windows\" />" >> Aura.nuspec
-          printf '%s
-' "  </files>" >> Aura.nuspec
-          printf '%s
-' "</package>" >> Aura.nuspec
+          {
+            echo '<?xml version="1.0"?>'
+            echo '<package>'
+            echo '  <metadata>'
+            echo '    <id>Aura</id>'
+            echo "    <version>${VER}</version>"
+            echo '    <authors>Sealion</authors>'
+            echo '    <description>AURA Unity app with custom WPF installer</description>'
+            echo '  </metadata>'
+            echo '  <files>'
+            echo '    <file src="package\**\*.*" target="lib\net6.0-windows" />'
+            echo '  </files>'
+            echo '</package>'
+          } > Aura.nuspec
 
       # 9 – Create the .nupkg
       - name: NuGet pack
