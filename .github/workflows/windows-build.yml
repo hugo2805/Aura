@@ -89,7 +89,7 @@ jobs:
             echo '    <description>AURA Unity app with custom WPF installer</description>'
             echo '  </metadata>'
             echo '  <files>'
-            echo '    <file src="package/**" target="lib/net6.0-windows" />'
+            echo '    <file src="package/**" target="" />'
             echo '  </files>'
             echo '</package>'
           } > Aura.nuspec
