@@ -71,14 +71,17 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path package
-          # Copy all Unity build files
+          # Copy Unity build output (flat)
           Copy-Item -Recurse build/UnityPlayer/* package/
-          # Copy all net6.0-windows installer files
+          # Copy *everything* from AuraInstaller publish tree
           Copy-Item -Recurse build/Installer/net6.0-windows/* package/
-          # Ensure executable is present for Squirrel
-          Copy-Item build/Installer/net6.0-windows/AuraInstaller.exe package/
 
-      # 8 – Create Aura.nuspec on the fly (no heredoc, avoids YAML issues)
+          # ➜ Trouve l'exécutable AuraInstaller.exe quel que soit le sous-dossier (win‑x64, win‑x86…)
+          $exe = Get-ChildItem build/Installer/net6.0-windows -Recurse -Filter AuraInstaller.exe | Select-Object -First 1
+          if (-not $exe) { throw "AuraInstaller.exe introuvable dans le ZIP !" }
+          Copy-Item $exe.FullName package/
+
+      # 8 – Create Aura.nuspec on the fly (no heredoc, avoids YAML issues) – Create Aura.nuspec on the fly (no heredoc, avoids YAML issues)
       - name: Create Aura.nuspec
         shell: bash
         run: |
