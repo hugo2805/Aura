@@ -38,7 +38,7 @@ jobs:
       - name: Download Unity build ZIP
         shell: pwsh
         run: |
-          $base = '${{ secrets.BUILD_BASE_URL }}'
+          $base = "https://build.sealion.fr"
           $ver  = '${{ steps.vars.outputs.version }}'
           $zip  = '${{ env.ZIP_NAME_TEMPLATE }}'
           $url  = "$base/$ver/$zip"
