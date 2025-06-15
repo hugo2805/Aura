@@ -37,7 +37,7 @@ jobs:
           VERSION=${TAG#v}
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      # 3 – Download the Unity build ZIP
+      # 3 – Download Unity build ZIP
       - name: Download Unity build ZIP
         shell: pwsh
         run: |
@@ -48,19 +48,23 @@ jobs:
           Write-Host "Downloading $url …"
           Invoke-WebRequest -Uri $url -OutFile unity.zip -UseBasicParsing
 
-      # 4 – Extract the ZIP
+      # 4 – Extract Unity ZIP
       - name: Extract Unity ZIP
         run: 7z x unity.zip -obuild/UnityPlayer
 
-      # 5 – Install .NET SDK (for WPF build)
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+      # 5 – Download prebuilt AuraInstaller ZIP
+      - name: Download AuraInstaller ZIP
+        shell: pwsh
+        run: |
+          $base = "https://build.sealion.fr"
+          $ver  = '${{ steps.vars.outputs.version }}'
+          $url  = "$base/$ver/AuraInstaller.zip"
+          Write-Host "Downloading $url …"
+          Invoke-WebRequest -Uri $url -OutFile installer.zip -UseBasicParsing
 
-      # 6 – Publish the custom WPF installer
-      - name: Publish AuraInstaller (WPF)
-        run: dotnet publish AuraInstaller/AuraInstaller.csproj -c Release -r win-x64 --self-contained false /p:PublishSingleFile=true -o build/Installer
+      # 6 – Extract AuraInstaller ZIP
+      - name: Extract AuraInstaller ZIP
+        run: 7z x installer.zip -obuild/Installer
 
       # 7 – Gather all files to be packaged
       - name: Prepare package content
