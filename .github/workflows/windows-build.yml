@@ -1,5 +1,5 @@
 # GitHub Actions workflow — package Aura with Squirrel and a custom WPF installer
-# Trigger: runs whenever a GitHub Release is *published* (tag vX.Y.Z)
+# Trigger : runs whenever a GitHub **Release** is *published* (tag vX.Y.Z)
 
 name: Package & Release (Windows)
 
@@ -17,18 +17,18 @@ on:
 # ---------------------------------------------------------------------------
 
 env:
-  ZIP_NAME_TEMPLATE: Aura.zip   # name of your Unity build archive
+  ZIP_NAME_TEMPLATE: Aura.zip   # name of the Unity build archive
 
 jobs:
   windows:
     runs-on: windows-latest
 
     steps:
-      # 1 – Checkout repository
+      # 1 – Checkout repository ------------------------------------------------
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2 – Extract version from tag (v1.2.3 → 1.2.3)
+      # 2 – Extract version from tag (v1.2.3 → 1.2.3) ------------------------
       - name: Parse version
         id: vars
         shell: bash
@@ -37,52 +37,45 @@ jobs:
           VERSION=${TAG#v}
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      # 3 – Download Unity build ZIP
+      # 3 – Download Unity build ZIP -----------------------------------------
       - name: Download Unity build ZIP
         shell: pwsh
         run: |
           $base = "https://build.sealion.fr"
           $ver  = '${{ steps.vars.outputs.version }}'
           $zip  = '${{ env.ZIP_NAME_TEMPLATE }}'
-          $url  = "$base/$ver/$zip"
-          Write-Host "Downloading $url …"
-          Invoke-WebRequest -Uri $url -OutFile unity.zip -UseBasicParsing
+          Invoke-WebRequest -Uri "$base/$ver/$zip" -OutFile unity.zip -UseBasicParsing
 
-      # 4 – Extract Unity ZIP
+      # 4 – Extract Unity ZIP --------------------------------------------------
       - name: Extract Unity ZIP
         run: 7z x unity.zip -obuild/UnityPlayer
 
-      # 5 – Download prebuilt AuraInstaller ZIP
+      # 5 – Download pre‑built AuraInstaller ZIP ------------------------------
       - name: Download AuraInstaller ZIP
         shell: pwsh
         run: |
           $base = "https://build.sealion.fr"
           $ver  = '${{ steps.vars.outputs.version }}'
-          $url  = "$base/$ver/AuraInstaller.zip"
-          Write-Host "Downloading $url …"
-          Invoke-WebRequest -Uri $url -OutFile installer.zip -UseBasicParsing
+          Invoke-WebRequest -Uri "$base/$ver/AuraInstaller.zip" -OutFile installer.zip -UseBasicParsing
 
-      # 6 – Extract AuraInstaller ZIP
+      # 6 – Extract AuraInstaller ZIP -----------------------------------------
       - name: Extract AuraInstaller ZIP
         run: 7z x installer.zip -obuild/Installer
 
-      # 7 – Gather all files to be packaged
+      # 7 – Gather all files to be packaged -----------------------------------
       - name: Prepare package content
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path package
-          # Copy Unity build output (flat)
+          New-Item -ItemType Directory -Force -Path package | Out-Null
           Copy-Item -Recurse build/UnityPlayer/* package/
-          # Copy *everything* from AuraInstaller ZIP (the .exe is now at the root)
-          Copy-Item -Recurse build/Installer/* package/
+          Copy-Item -Recurse build/Installer/*   package/
 
-          # ➜ Locate AuraInstaller.exe (root of the zip or any sub‑folder)
+          # ➜ Locate AuraInstaller.exe (wherever it is in the ZIP)
           $exe = Get-ChildItem build/Installer -Recurse -Filter AuraInstaller.exe | Select-Object -First 1
           if (-not $exe) { throw "AuraInstaller.exe introuvable dans le ZIP !" }
-          # Ensure the executable is present at the package root
           Copy-Item $exe.FullName package/ -Force
 
-      # 8 – Create Aura.nuspec on the fly (no heredoc, avoids YAML issues)
+      # 8 – Create Aura.nuspec on‑the‑fly -------------------------------------
       - name: Create Aura.nuspec
         shell: bash
         run: |
@@ -97,52 +90,56 @@ jobs:
             echo '    <description>AURA Unity app with custom WPF installer</description>'
             echo '  </metadata>'
             echo '  <files>'
-            echo '    <file src="package/**" target="lib" />'
+            # Put everything under lib/net45 so both NuGet *and* Squirrel are happy
+            echo '    <file src="package/**" target="lib/net45" />'
             echo '    <file src="README.md" target="" />'
             echo '  </files>'
             echo '</package>'
           } > Aura.nuspec
 
-      # 8b – Ajout d'un README temporaire pour NuGet
+      # 8b – Minimal README so NuGet stops warning ----------------------------
       - name: Create README.md
         run: echo "AURA Unity app packaged with a custom WPF installer." > README.md
 
-      # 9 – Create the .nupkg
+      # 9 – Build the .nupkg ---------------------------------------------------
       - name: NuGet pack
         run: nuget pack Aura.nuspec -Version ${{ steps.vars.outputs.version }} -OutputDirectory . -NoDefaultExcludes
 
-      # 10 – Install Squirrel CLI
+      # 10 – Install Squirrel CLI ---------------------------------------------
       - name: Install Squirrel CLI
         run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
 
-      # 11 – Releasify: generate setup + RELEASES + delta patches
-      - name: Squirrel releasify with custom installer
+      # 11 – Releasify: create Setup.exe, RELEASES, delta patches -------------
+      - name: Squirrel releasify (custom installer)
         shell: pwsh
         run: |
-          $ver = '${{ steps.vars.outputs.version }}'
+          $ver      = '${{ steps.vars.outputs.version }}'
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
 
-          # Nettoyage du dossier Releases
+          # Clean output folder
           Remove-Item -Recurse -Force Releases -ErrorAction Ignore
-          New-Item -ItemType Directory -Path Releases
+          New-Item -ItemType Directory -Path Releases | Out-Null
 
-          # Copie Setup.exe pour que Squirrel puisse le renommer en AuraSetup.exe
-          $setupPath = "$($squirrel.DirectoryName)\Setup.exe"
-          Write-Host "Chemin de Setup.exe: $setupPath"
-          Copy-Item $setupPath .\AuraSetup.exe -Force
+          # Provide bootstrapper exe so we keep the name AuraSetup.exe
+          Copy-Item (Join-Path $squirrel.DirectoryName 'Setup.exe') AuraSetup.exe -Force
+
+          # Main executable path *inside* the .nupkg (because everything sits under lib/net45)
+          $exeInPkg = 'lib\net45\AuraInstaller.exe'
 
           & $squirrel.FullName `
             --releasify Aura.$ver.nupkg `
             --releaseDir Releases `
             --no-msi `
             --bootstrapperExe AuraSetup.exe `
-            --exe AuraInstaller.exe `
-            --verbose 2>&1
+            --exe $exeInPkg `
+            --verbose
 
-          Write-Host "Squirrel exit code: $LASTEXITCODE"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Squirrel releasify failed with exit code $LASTEXITCODE"
+          }
 
-      # 🔁 Forcer la présence de AuraSetup.exe à la racine
-      - name: 🔁 Renommer AuraSetup.exe si trouvé
+      # 12 – Guarantee AuraSetup.exe is at the root of Releases ---------------
+      - name: Ensure AuraSetup.exe at root
         shell: pwsh
         run: |
           $exe = Get-ChildItem -Recurse Releases -Filter AuraSetup.exe | Select-Object -First 1
@@ -150,42 +147,26 @@ jobs:
             Copy-Item $exe.FullName Releases/AuraSetup.exe -Force
             Write-Host "✅ AuraSetup.exe copié à la racine de Releases/"
           } else {
-            Write-Host "❌ AuraSetup.exe introuvable"
+            throw "AuraSetup.exe introuvable après releasify !"
           }
 
-      - name: 🔍 Lister les fichiers dans Releases
-        run: ls -R Releases
-
-      - name: Vérification des fichiers Squirrel
+      # 13 – Quick sanity check ------------------------------------------------
+      - name: Verify Squirrel outputs
         shell: pwsh
         run: |
-          if (-not (Test-Path "Releases/RELEASES")) {
-            Write-Host "⚠️ Fichier RELEASES manquant"
-          } else {
-            Write-Host "✅ Fichier RELEASES trouvé"
-          }
-          if (-not (Test-Path "Releases/AuraSetup.exe")) {
-            Write-Host "⚠️ AuraSetup.exe manquant"
-          } else {
-            Write-Host "✅ AuraSetup.exe trouvé"
-          }
-          Get-ChildItem -Recurse Releases | Format-List
+          if (-not (Test-Path 'Releases/RELEASES')) { throw 'Fichier RELEASES manquant' }
+          if (-not (Test-Path 'Releases/AuraSetup.exe')) { throw 'AuraSetup.exe manquant' }
+          Write-Host '✅ Tous les fichiers Squirrel sont présents'
 
-      - name: 🔎 Debug all build outputs
-        shell: pwsh
-        run: |
-          Get-ChildItem -Recurse | Where-Object { $_.Name -like '*.exe' -or $_.Name -like '*.nupkg' }
-
-      - name: Debug Upload - Print files
+      - name: List Releases folder (debug)
         run: ls -R Releases
 
-      # 13 – Attach artefacts to the GitHub Release
+      # 14 – Attach artefacts to the GitHub Release ---------------------------
       - name: Attach artefacts to GitHub Release
         if: github.event_name == 'release' && github.event.action == 'published'
         uses: softprops/action-gh-release@v2
         with:
           fail_on_unmatched_files: false
-          files: |
-            Releases/**
+          files: Releases/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
