@@ -121,19 +121,29 @@ jobs:
         run: |
           $ver = '${{ steps.vars.outputs.version }}'
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
-      
+
+          # Nettoyage du dossier Releases
+          Remove-Item -Recurse -Force Releases -ErrorAction Ignore
+          New-Item -ItemType Directory -Path Releases
+
           # Copie Setup.exe pour que Squirrel puisse le renommer en AuraSetup.exe
-          Copy-Item "$($squirrel.DirectoryName)\Setup.exe" .\AuraSetup.exe -Force
-      
+          $setupPath = "$($squirrel.DirectoryName)\Setup.exe"
+          Write-Host "Chemin de Setup.exe: $setupPath"
+          Copy-Item $setupPath .\AuraSetup.exe -Force
+
           & $squirrel.FullName `
             --releasify Aura.$ver.nupkg `
             --releaseDir Releases `
             --no-msi `
             --bootstrapperExe AuraSetup.exe `
             --exe AuraInstaller.exe `
-            --verbose
-      
+            --verbose 2>&1
+
           Write-Host "Squirrel exit code: $LASTEXITCODE"
+
+      # 11a – Lister les fichiers dans Releases pour déboguer
+      - name: 🔍 Lister les fichiers dans Releases
+        run: ls -R Releases
 
       # 11b – Vérification des fichiers Squirrel générés
       - name: Vérification des fichiers Squirrel
