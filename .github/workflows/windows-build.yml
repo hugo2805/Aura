@@ -41,7 +41,7 @@ jobs:
       - name: Download Unity build ZIP
         shell: pwsh
         run: |
-          $base = "https://build.sealion.fr"
+          $base = "${{ secrets.BUILD_BASE_URL }}"
           $ver  = '${{ steps.vars.outputs.version }}'
           $zip  = '${{ env.ZIP_NAME_TEMPLATE }}'
           $url  = "$base/$ver/$zip"
@@ -52,17 +52,17 @@ jobs:
       - name: Extract Unity ZIP
         run: 7z x unity.zip -obuild/UnityPlayer
 
-      # 5 – Télécharge le ZIP pré‑compilé d’AuraInstaller
+      # 5 – Télécharge le ZIP pré‑compilé d’AuraInstaller (WPF) – *n’est PAS packagé dans le .nupkg*
       - name: Download AuraInstaller ZIP
         shell: pwsh
         run: |
-          $base = "https://build.sealion.fr"
+          $base = "${{ secrets.BUILD_BASE_URL }}"
           $ver  = '${{ steps.vars.outputs.version }}'
           $url  = "$base/$ver/AuraInstaller.zip"
           Write-Host "Downloading $url …"
           Invoke-WebRequest -Uri $url -OutFile installer.zip -UseBasicParsing
 
-      # 6 – Décompresse AuraInstaller
+      # 6 – Décompresse AuraInstaller (on garde le binaire pour plus tard)
       - name: Extract AuraInstaller ZIP
         run: 7z x installer.zip -obuild/Installer
 
@@ -81,21 +81,21 @@ jobs:
         shell: bash
         run: |
           VER="${{ steps.vars.outputs.version }}"
-          {
-            echo '<?xml version="1.0"?>'
-            echo '<package>'
-            echo '  <metadata>'
-            echo '    <id>Aura</id>'
-            echo "    <version>${VER}</version>"
-            echo '    <authors>Sealion</authors>'
-            echo '    <description>AURA Unity app (player only) packagée par Squirrel.</description>'
-            echo '  </metadata>'
-            echo '  <files>'
-            echo '    <file src="package/**" target="lib" />'
-            echo '    <file src="README.md" target="" />'
-            echo '  </files>'
-            echo '</package>'
-          } > Aura.nuspec
+          cat <<EOF > Aura.nuspec
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>Aura</id>
+    <version>${VER}</version>
+    <authors>Sealion</authors>
+    <description>AURA Unity app (player only) packagée par Squirrel.</description>
+  </metadata>
+  <files>
+    <file src="package/**" target="lib" />
+    <file src="README.md" target="" />
+  </files>
+</package>
+EOF
 
       # 8b – README minimal pour NuGet
       - name: Create README.md
@@ -109,12 +109,12 @@ jobs:
       - name: Install Squirrel CLI
         run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
 
-      # 11 – Releasify : génère update.exe (bootstrapped par AuraInstaller)
-      - name: Squirrel releasify (Unity included)
+      # 11 – Releasify : génère update.exe (= bootstrapper Squirrel par défaut)
+      - name: Squirrel releasify (Unity only)
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $ver = '${{ steps.vars.outputs.version }}'
+          $ver      = '${{ steps.vars.outputs.version }}'
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
 
           Remove-Item -Recurse -Force Releases -ErrorAction Ignore
@@ -131,18 +131,25 @@ jobs:
           & $squirrel.FullName @args
           if ($LASTEXITCODE -ne 0) { throw "Squirrel releasify failed ($LASTEXITCODE)" }
 
+          # --------------------------------------------------------------
+          # ➜ Copie AuraInstaller.exe à côté de update.exe (même dossier)
+          #    ainsi le lanceur WPF pourra appeler update.exe au runtime.
+          # --------------------------------------------------------------
+          Copy-Item build/Installer/AuraInstaller.exe Releases/ -Force
+
       # 12 – Vérification rapide des artéfacts
       - name: Vérification des fichiers Squirrel
         shell: pwsh
         run: |
-          if (-not (Test-Path "Releases/RELEASES")) { throw "RELEASES manquant" }
-          if (-not (Test-Path "Releases/update.exe")) { throw "update.exe manquant" }
+          if (-not (Test-Path "Releases/RELEASES"))      { throw "RELEASES manquant" }
+          if (-not (Test-Path "Releases/update.exe"))     { throw "update.exe manquant" }
+          if (-not (Test-Path "Releases/AuraInstaller.exe")) { throw "AuraInstaller.exe manquant" }
           Write-Host "✅ Artéfacts Squirrel OK"
 
       # 13 – Debug : liste les EXE/NUPKG générés
       - name: 🔎 Debug build outputs
         shell: pwsh
-        run: Get-ChildItem -Recurse | Where-Object { $_.Name -like '*.exe' -or $_.Name -like '*.nupkg' }
+        run: Get-ChildItem -Recurse | Where-Object { $_.Name -match '\.(exe|nupkg)$' }
 
       # 14 – Attache les artéfacts à la Release GitHub
       - name: Attach artefacts to GitHub Release
