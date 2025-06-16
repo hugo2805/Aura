@@ -57,9 +57,13 @@ Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 Source: "{#MyBuildDir}\Updater\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#MyBuildDir}\Game\*";    DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#MyBuildDir}\version.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Installer\logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{commondesktop}\Aura"; Filename: "{app}\AuraInstaller.exe"; IconFilename: "{app}\logo.ico"
+Name: "{commondesktop}\Aura"; \
+      Filename: "{app}\AuraInstaller.exe"; \
+      IconFilename: "{app}\logo.ico"; \
+      WorkingDir: "{app}"
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "Lancer {#AppName}"; Flags: nowait postinstall
