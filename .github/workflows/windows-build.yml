@@ -77,15 +77,14 @@ jobs:
       #        (nécessite secrets REMOTE_HOST / REMOTE_USER / REMOTE_SSH_KEY)
       # --------------------------------------------------
       - name: 🌐 Upload version.txt to remote storage
-        if: ${{ secrets.REMOTE_HOST != '' }}
         uses: appleboy/scp-action@v0.1.4
         with:
-          host: ${{ secrets.REMOTE_HOST }}
-          username: ${{ secrets.REMOTE_USER }}
-          key: ${{ secrets.REMOTE_SSH_KEY }}
-          port: ${{ '22' }}
+          host: "access937775265.webspace-data.io"
+          username: "acc138818365"
+          key: "rg9s6ka3mTrCCKbt"
+          port: "22"
           source: "${{ env.BUILD_DIR }}/version.txt"
-          target: ${{ secrets.REMOTE_DIR }}
+          target: ""
 
       # --------------------------------------------------
       # 5) Installe Inno Setup 6 (si pas déjà présent)
