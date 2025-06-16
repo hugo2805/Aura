@@ -1,5 +1,5 @@
-# GitHub Actions workflow — package Aura with Squirrel and a custom WPF installer
-# Trigger : lorsqu’une Release GitHub est *publiée* (tag vX.Y.Z)
+# GitHub Actions workflow — package Aura with Squirrel and a custom WPF installer
+# Trigger : lorsqu’une Release GitHub est *publiée* (tag vX.Y.Z)
 
 name: Package & Release (Windows)
 
@@ -12,7 +12,7 @@ on:
 
 # ---------------------------------------------------------------------------
 # Secrets requis
-#   BUILD_BASE_URL — URL racine où se trouvent les ZIP (ex : https://build.sealion.fr)
+#   BUILD_BASE_URL — URL racine où se trouvent les ZIP (ex : https://build.sealion.fr)
 #   GITHUB_TOKEN   — fourni automatiquement par GitHub
 # ---------------------------------------------------------------------------
 
@@ -24,11 +24,11 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # 1 – Checkout du dépôt
+      # 1 – Checkout du dépôt
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2 – Récupère la version depuis le tag (v1.2.3 → 1.2.3)
+      # 2 – Récupère la version depuis le tag (v1.2.3 → 1.2.3)
       - name: Parse version
         id: vars
         shell: bash
@@ -37,7 +37,7 @@ jobs:
           VERSION=${TAG#v}
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      # 3 – Télécharge le ZIP du player Unity
+      # 3 – Télécharge le ZIP du player Unity
       - name: Download Unity build ZIP
         shell: pwsh
         run: |
@@ -48,11 +48,11 @@ jobs:
           Write-Host "Downloading $url …"
           Invoke-WebRequest -Uri $url -OutFile unity.zip -UseBasicParsing
 
-      # 4 – Décompresse le ZIP Unity
+      # 4 – Décompresse le ZIP Unity
       - name: Extract Unity ZIP
         run: 7z x unity.zip -obuild/UnityPlayer
 
-      # 5 – Télécharge le ZIP pré‑compilé d’AuraInstaller (WPF) – *n’est PAS packagé dans le .nupkg*
+      # 5 – Télécharge le ZIP pré-compilé d’AuraInstaller (WPF) – *n’est PAS packagé dans le .nupkg*
       - name: Download AuraInstaller ZIP
         shell: pwsh
         run: |
@@ -62,11 +62,11 @@ jobs:
           Write-Host "Downloading $url …"
           Invoke-WebRequest -Uri $url -OutFile installer.zip -UseBasicParsing
 
-      # 6 – Décompresse AuraInstaller (on garde le binaire pour plus tard)
+      # 6 – Décompresse AuraInstaller (on garde le binaire pour plus tard)
       - name: Extract AuraInstaller ZIP
         run: 7z x installer.zip -obuild/Installer
 
-      # 7 – Prépare le contenu du package (.nupkg)
+      # 7 – Prépare le contenu du package (.nupkg)
       - name: Prepare package content
         shell: pwsh
         run: |
@@ -76,7 +76,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path package | Out-Null
           Copy-Item -Recurse build/UnityPlayer/* package/ -Force
 
-      # 8 – Génère Aura.nuspec ligne par ligne (echo) – évite les soucis YAML
+      # 8 – Génère Aura.nuspec ligne par ligne (echo) – évite les soucis YAML
       - name: Create Aura.nuspec
         shell: bash
         run: |
@@ -95,19 +95,19 @@ jobs:
           echo '  </files>'                                     >> Aura.nuspec
           echo '</package>'                                     >> Aura.nuspec
 
-      # 8b – README minimal pour NuGet
+      # 8b – README minimal pour NuGet
       - name: Create README.md
         run: echo "AURA Unity app packaged (player only)." > README.md
 
-      # 9 – Crée le .nupkg (Unity inclus)
+      # 9 – Crée le .nupkg (Unity inclus)
       - name: NuGet pack
         run: nuget pack Aura.nuspec -Version ${{ steps.vars.outputs.version }} -OutputDirectory . -NoDefaultExcludes
 
-      # 10 – Installe l’outil CLI Squirrel
+      # 10 – Installe l’outil CLI Squirrel
       - name: Install Squirrel CLI
         run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
 
-      # 11 – Releasify : génère update.exe (= bootstrapper Squirrel)
+      # 11 – Releasify : génère update.exe (= bootstrapper Squirrel)
       - name: Squirrel releasify (Unity only)
         shell: pwsh
         run: |
@@ -120,6 +120,11 @@ jobs:
 
           # EXE principal du player Unity (créera les raccourcis)
           $mainExe = 'Protec.exe'
+
+          # --- Diagnostic : liste les fichiers dispos avant releasify -----
+          Write-Host '📂 Listing working dir before releasify:'
+          Get-ChildItem -Recurse -File | ForEach-Object { Write-Host $_.FullName }
+          # ----------------------------------------------------------------
 
           $args = @(
             '--releasify', "Aura.$ver.nupkg",
@@ -139,7 +144,7 @@ jobs:
           # --------------------------------------------------------------
           Copy-Item build/Installer/AuraInstaller.exe Releases/ -Force
 
-      # 12 – Vérification rapide des artéfacts
+      # 12 – Vérification rapide des artéfacts
       - name: Vérification des fichiers Squirrel
         shell: pwsh
         run: |
@@ -148,12 +153,12 @@ jobs:
           if (-not (Test-Path 'Releases/AuraInstaller.exe')) { throw 'AuraInstaller.exe manquant' }
           Write-Host '✅ Artéfacts Squirrel OK'
 
-      # 13 – Debug : liste les EXE/NUPKG générés
+      # 13 – Debug : liste les EXE/NUPKG générés
       - name: 🔎 Debug build outputs
         shell: pwsh
         run: Get-ChildItem -Recurse | Where-Object { $_.Name -match '\\.(exe|nupkg)$' }
 
-      # 14 – Attache les artéfacts à la Release GitHub
+      # 14 – Attache les artéfacts à la Release GitHub
       - name: Attach artefacts to GitHub Release
         if: github.event_name == 'release' && github.event.action == 'published'
         uses: softprops/action-gh-release@v2
