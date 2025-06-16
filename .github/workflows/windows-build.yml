@@ -107,7 +107,7 @@ jobs:
       - name: Install Squirrel CLI
         run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
 
-      # 11 – Releasify : génère update.exe (= bootstrapper Squirrel par défaut)
+      # 11 – Releasify : génère update.exe (= bootstrapper Squirrel)
       - name: Squirrel releasify (Unity only)
         shell: pwsh
         run: |
@@ -118,11 +118,15 @@ jobs:
           Remove-Item -Recurse -Force Releases -ErrorAction Ignore
           New-Item -ItemType Directory -Path Releases | Out-Null
 
+          # EXE principal du player Unity (créera les raccourcis)
+          $mainExe = 'Protec.exe'
+
           $args = @(
-            "--releasify", "Aura.$ver.nupkg",
-            "--releaseDir", "Releases",
-            "--no-msi",
-            "--verbose"
+            '--releasify', "Aura.$ver.nupkg",
+            '--releaseDir', 'Releases',
+            '--no-msi',
+            '--exe', $mainExe,
+            '--verbose'
           )
 
           Write-Host ">> Running: $($squirrel.FullName) $($args -join ' ')"
@@ -139,10 +143,10 @@ jobs:
       - name: Vérification des fichiers Squirrel
         shell: pwsh
         run: |
-          if (-not (Test-Path "Releases/RELEASES"))          { throw "RELEASES manquant" }
-          if (-not (Test-Path "Releases/update.exe"))        { throw "update.exe manquant" }
-          if (-not (Test-Path "Releases/AuraInstaller.exe")) { throw "AuraInstaller.exe manquant" }
-          Write-Host "✅ Artéfacts Squirrel OK"
+          if (-not (Test-Path 'Releases/RELEASES'))          { throw 'RELEASES manquant' }
+          if (-not (Test-Path 'Releases/update.exe'))        { throw 'update.exe manquant' }
+          if (-not (Test-Path 'Releases/AuraInstaller.exe')) { throw 'AuraInstaller.exe manquant' }
+          Write-Host '✅ Artéfacts Squirrel OK'
 
       # 13 – Debug : liste les EXE/NUPKG générés
       - name: 🔎 Debug build outputs
