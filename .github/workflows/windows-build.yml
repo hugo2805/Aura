@@ -88,6 +88,20 @@ jobs:
             Where-Object { $_.DirectoryName -ne (Resolve-Path package).Path } |
             Remove-Item -Force
 
+      # 7b – Vérifie qu’aucun fichier du dossier package n’utilise un chemin invalide selon OPC
+      - name: Validate package paths
+        shell: pwsh
+        run: |
+          $invalid = Get-ChildItem -Recurse -Path package | Where-Object {
+            $_.FullName -match '[#%?]' -or $_.Name -match '\s$'
+          }
+          if ($invalid) {
+            Write-Host "❌ Chemins ou noms de fichiers invalides détectés :"
+            $invalid | ForEach-Object { Write-Host $_.FullName }
+            throw "Chemins invalides détectés dans le package — corrigez avant de continuer."
+          }
+          Write-Host '✅ Aucun chemin invalide détecté'
+
       # 8 – Génère Aura.nuspec ligne par ligne (echo) – évite les soucis YAML
       - name: Create Aura.nuspec
         shell: bash
