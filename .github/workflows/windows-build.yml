@@ -1,11 +1,13 @@
 # .github/workflows/build.yml
 # ------------------------------------------------------------
-# Génère l'installeur Windows à chaque TAG pushé.
-# 1. Compile l'Updater WPF (.NET 8)
-# 2. Télécharge le build Unity zippé depuis ton serveur
-# 3. Fusionne Updater + jeu dans BuildReady/
-# 4. Lance Inno Setup (ISS) pour créer l'exécutable d'installation
-# 5. Publie l'installeur en tant qu'artefact de workflow
+# Génère l'installeur Windows pour **chaque tag** (push de vX.Y.Z).
+# 1. Compile l'Updater WPF (.NET 8)
+# 2. Télécharge le build Unity zippé depuis le serveur perso
+# 3. Fusionne Updater + jeu + version.txt dans BuildReady/
+# 4. Exécute Inno Setup pour créer `Aura_Setup.exe`
+# 5. Publie l'exécutable **à la fois** :
+#    • comme artefact du workflow (pratique pour debug)
+#    • comme asset de la Release GitHub correspondante (visible par les utilisateurs)
 # ------------------------------------------------------------
 
 name: Build Windows Installer
@@ -13,71 +15,92 @@ name: Build Windows Installer
 on:
   push:
     tags:
-      - '*'
+      - "*"   # tout tag déclenche le build
 
 jobs:
   build:
     runs-on: windows-latest
 
+    # Variables d'environnement communes au job
     env:
-      UNITY_ZIP_URL: "https://build.sealion.fr/updates/Aura.zip"  # ← adapte si nécessaire
-      BUILD_DIR: BuildReady                                       # dossier temporaire
+      UNITY_ZIP_URL: "https://build.sealion.fr/updates/Aura.zip"  # URL du zip Unity
+      BUILD_DIR: BuildReady                                       # dossier temporaire local
 
     steps:
+      # --------------------------------------------------
+      # 0) Checkout
+      # --------------------------------------------------
       - name: ⬇️ Checkout repository
         uses: actions/checkout@v3
 
-      - name: ⚙️ Setup .NET 8
+      # --------------------------------------------------
+      # 1) .NET SDK
+      # --------------------------------------------------
+      - name: ⚙️ Setup .NET 8
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: "8.0.x"
 
       # --------------------------------------------------
-      # 1) Compile l'Updater
+      # 2) Build Updater WPF
       # --------------------------------------------------
-      - name: 🧱 Restore & Build Updater
+      - name: 🧱 Restore & publish Updater
         run: |
           dotnet restore Updater/AuraInstaller.sln
-          dotnet publish Updater/AuraInstaller.csproj -c Release -o ${{ env.BUILD_DIR }}\Updater
+          dotnet publish Updater/AuraInstaller.csproj -c Release -o "${{ env.BUILD_DIR }}\\Updater"
 
       # --------------------------------------------------
-      # 2) Télécharge le build Unity (Protec.exe etc.)
+      # 3) Télécharge le jeu Unity (zip)
       # --------------------------------------------------
-      - name: 📥 Download Unity build zip
+      - name: 📥 Download Unity build
         shell: pwsh
         run: |
-          Invoke-WebRequest -Uri ${{ env.UNITY_ZIP_URL }} -OutFile unity.zip
-          Expand-Archive -Path unity.zip -DestinationPath ${{ env.BUILD_DIR }}\Game -Force
+          Invoke-WebRequest -Uri "${{ env.UNITY_ZIP_URL }}" -OutFile unity.zip
+          Expand-Archive -Path unity.zip -DestinationPath "${{ env.BUILD_DIR }}\\Game" -Force
 
       # --------------------------------------------------
-      # 3) Génère version.txt (tag courant) dans BuildReady
+      # 4) Génère version.txt à partir du tag
       # --------------------------------------------------
       - name: 🏷️ Generate version.txt
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}" -replace "^refs/tags/", "" -replace "^v", ""
-          Set-Content -Path "${{ env.BUILD_DIR }}\version.txt" -Value $version
+          Set-Content -Path "${{ env.BUILD_DIR }}\\version.txt" -Value $version
           echo "AppVersion=$version" | Out-File -FilePath $Env:GITHUB_ENV -Append
 
       # --------------------------------------------------
-      # 4) Installe Inno Setup et génère l'installeur
+      # 5) Installe Inno Setup 6 (si pas déjà présent)
       # --------------------------------------------------
       - name: 🧰 Install Inno Setup 6
         run: choco install innosetup --no-progress
 
-      - name: 📦 Run ISCC
+      # --------------------------------------------------
+      # 6) Compile l'installeur via ISCC
+      # --------------------------------------------------
+      - name: 🛠️ Run ISCC
         shell: pwsh
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
-            /DMyBuildDir="${{ github.workspace }}\${{ env.BUILD_DIR }}" `
+          & "C:\\Program Files (x86)\\Inno Setup 6\\ISCC.exe" `
+            /DMyBuildDir="${{ github.workspace }}\\${{ env.BUILD_DIR }}" `
             /DAppVersion=${{ env.AppVersion }} `
             Installer\setup.iss
 
       # --------------------------------------------------
-      # 5) Publie l'installeur en artefact
+      # 7) Publie l'EXE :
+      #    a) Artefact de workflow (toujours)
+      #    b) Asset attaché à la Release GitHub (visible utilisateurs)
       # --------------------------------------------------
       - name: ⬆️ Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: AuraInstaller
-          path: Installer\Output\*.exe
+          path: Installer/Output/*.exe
+
+      - name: 🚀 Publish asset to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Aura_Setup.exe
+          tag_name: ${{ github.ref_name }}   # crée la release si inexistante
+          files: Installer/Output/Aura_Setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
