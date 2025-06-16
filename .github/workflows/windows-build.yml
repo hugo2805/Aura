@@ -90,7 +90,7 @@ jobs:
           echo '    <description>AURA Unity app (player only) packagée par Squirrel.</description>' >> Aura.nuspec
           echo '  </metadata>'                                  >> Aura.nuspec
           echo '  <files>'                                      >> Aura.nuspec
-          echo '    <file src="package/**" target="lib" />' >> Aura.nuspec
+          echo '    <file src="package/**" target="lib/net45" />' >> Aura.nuspec
           echo '    <file src="README.md" target="" />'     >> Aura.nuspec
           echo '  </files>'                                     >> Aura.nuspec
           echo '</package>'                                     >> Aura.nuspec
