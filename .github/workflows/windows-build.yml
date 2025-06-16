@@ -74,6 +74,13 @@ jobs:
           # 1) Player Unity complet   → package/…
           # -----------------------------------------------------------------
           New-Item -ItemType Directory -Force -Path package | Out-Null
+
+          # Assure que Protec.exe est bien à la racine du package
+          $protecexe = Get-ChildItem build/UnityPlayer -Recurse -Filter Protec.exe | Select-Object -First 1
+          if (-not $protecexe) { throw "❌ Protec.exe introuvable dans le build Unity" }
+          Copy-Item -Path $protecexe.FullName -Destination package/ -Force
+
+          # Copie le reste du contenu
           Copy-Item -Recurse build/UnityPlayer/* package/ -Force
 
       # 8 – Génère Aura.nuspec ligne par ligne (echo) – évite les soucis YAML
