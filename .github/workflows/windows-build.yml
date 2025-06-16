@@ -85,7 +85,7 @@ jobs:
           key: ${{ secrets.REMOTE_SSH_KEY }}
           port: ${{ '22' }}
           source: "${{ env.BUILD_DIR }}/version.txt"
-          target: ${{ secrets.REMOTE_DIR || '/var/www/updates/' }}
+          target: ${{ secrets.REMOTE_DIR }}
 
       # --------------------------------------------------
       # 5) Installe Inno Setup 6 (si pas déjà présent)
