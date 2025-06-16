@@ -17,6 +17,9 @@ on:
     tags:
       - "*"   # tout tag déclenche le build
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
