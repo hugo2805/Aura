@@ -18,7 +18,6 @@ on:
 
 env:
   ZIP_NAME_TEMPLATE: Aura.zip        # nom du build Unity compressé
-  SQUIRREL_VERSION: 2.1.0           # Mise à jour vers Squirrel 2.1.0 pour corriger les problèmes d'OPC
 
 jobs:
   windows:
@@ -117,8 +116,8 @@ jobs:
         run: nuget pack Aura.nuspec -Version ${{ steps.vars.outputs.version }} -OutputDirectory . -NoDefaultExcludes
 
       # 10 – Installe une version *2.1* de l’outil CLI Squirrel
-      - name: Install Squirrel CLI
-        run: nuget install squirrel.windows -Version ${{ env.SQUIRREL_VERSION }} -OutputDirectory tools -Verbosity quiet
+      - name: Install Squirrel CLI (latest)
+        run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
 
       # 11 – Releasify : génère update.exe (= bootstrapper Squirrel)
       - name: Squirrel releasify (Unity only)
