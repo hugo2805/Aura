@@ -1,215 +1,77 @@
-# GitHub Actions workflow — package Aura with Squirrel and a custom WPF installer
-# Trigger : lorsqu’une Release GitHub est *publiée* (tag vX.Y.Z)
+# .github/workflows/build.yml
+# ------------------------------------------------------------
+# Génère l'installeur Windows à chaque TAG pushé.
+# 1. Compile l'Updater WPF (.NET 6)
+# 2. Télécharge le build Unity zippé depuis ton serveur
+# 3. Décompresse et fusionne Updater + jeu dans BuildReady/
+# 4. Lance Inno Setup (ISS) pour créer l'exécutable d'installation
+# 5. Publie l'installeur en tant qu'artefact de workflow
+# ------------------------------------------------------------
 
-name: Package & Release (Windows)
-
-permissions:
-  contents: write
+name: Build Windows Installer
 
 on:
-  release:
-    types: [published]
-
-# ---------------------------------------------------------------------------
-# Secrets requis
-#   BUILD_BASE_URL — URL racine où se trouvent les ZIP (ex : https://build.sealion.fr)
-#   GITHUB_TOKEN   — fourni automatiquement par GitHub
-# ---------------------------------------------------------------------------
-
-env:
-  ZIP_NAME_TEMPLATE: Aura.zip        # nom du build Unity compressé
+  push:
+    tags:
+      - '*'
 
 jobs:
-  windows:
+  build:
     runs-on: windows-latest
 
+    env:
+      UNITY_ZIP_URL: "https://build.sealion.fr/updates/Aura.zip"  # ← adapte si nécessaire
+      BUILD_DIR: BuildReady                                       # dossier temporaire
+
     steps:
-      # 1 – Checkout du dépôt
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: ⬇️ Checkout repository
+        uses: actions/checkout@v3
 
-      # 2 – Récupère la version depuis le tag (v1.2.3 → 1.2.3)
-      - name: Parse version
-        id: vars
-        shell: bash
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION=${TAG#v}
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      # 3 – Télécharge le ZIP du player Unity
-      - name: Download Unity build ZIP
-        shell: pwsh
-        run: |
-          $base = "https://build.sealion.fr"
-          $ver  = '${{ steps.vars.outputs.version }}'
-          $zip  = '${{ env.ZIP_NAME_TEMPLATE }}'
-          $url  = "$base/$ver/$zip"
-          Write-Host "Downloading $url …"
-          Invoke-WebRequest -Uri $url -OutFile unity.zip -UseBasicParsing
-
-      # 4 – Décompresse le ZIP Unity
-      - name: Extract Unity ZIP
-        run: 7z x unity.zip -obuild/UnityPlayer
-
-      # 5 – Télécharge le ZIP pré‑compilé d’AuraInstaller (WPF) – *n’est PAS packagé dans le .nupkg*
-      - name: Download AuraInstaller ZIP
-        shell: pwsh
-        run: |
-          $base = "https://build.sealion.fr"
-          $ver  = '${{ steps.vars.outputs.version }}'
-          $url  = "$base/$ver/AuraInstaller.zip"
-          Write-Host "Downloading $url …"
-          Invoke-WebRequest -Uri $url -OutFile installer.zip -UseBasicParsing
-
-      # 6 – Décompresse AuraInstaller (on garde le binaire pour plus tard)
-      - name: Extract AuraInstaller ZIP
-        run: 7z x installer.zip -obuild/Installer
-
-      # 7 – Prépare le contenu du package (.nupkg)
-      - name: Prepare package content
-        shell: pwsh
-        run: |
-          # -----------------------------------------------------------------
-          # 1) Player Unity complet   → package/…
-          # -----------------------------------------------------------------
-          New-Item -ItemType Directory -Force -Path package | Out-Null
-
-          # Assure que Protec.exe est bien à la racine du package
-          $protecexe = Get-ChildItem build/UnityPlayer -Recurse -Filter Protec.exe | Select-Object -First 1
-          if (-not $protecexe) { throw "❌ Protec.exe introuvable dans le build Unity" }
-          Copy-Item -Path $protecexe.FullName -Destination package/ -Force
-
-          # Copie le reste du contenu
-          Copy-Item -Recurse build/UnityPlayer/* package/ -Force
-
-          # Supprime les éventuels doublons de Protec.exe dans les sous-dossiers (Squirrel échoue si plusieurs exe identiques)
-          Get-ChildItem package -Recurse -Filter Protec.exe |
-            Where-Object { $_.DirectoryName -ne (Resolve-Path package).Path } |
-            Remove-Item -Force
-
-      # 7b – Vérifie qu’aucun fichier du dossier package n’utilise un chemin invalide selon OPC
-      - name: Validate package paths
-        shell: pwsh
-        run: |
-          $invalid = Get-ChildItem -Recurse -Path package | Where-Object {
-            $_.FullName -match '[#%?]' -or $_.Name -match '\s$'
-          }
-          if ($invalid) {
-            Write-Host "❌ Chemins ou noms de fichiers invalides détectés :"
-            $invalid | ForEach-Object { Write-Host $_.FullName }
-            throw "Chemins invalides détectés dans le package — corrigez avant de continuer."
-          }
-          Write-Host '✅ Aucun chemin invalide détecté'
-
-      # 7c – Renomme le fichier problématique "unity default resources" (invalide pour OPC) → "unity_default_resources"
-      - name: Fix Unity resources file name
-        shell: pwsh
-        run: |
-          $targetDir = "package/Protec_Data/Resources"
-          $file = Get-ChildItem -Path $targetDir -Filter "unity default resources" -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($file) {
-            Rename-Item -Path $file.FullName -NewName 'unity_default_resources'
-            Write-Host '✅ Renamed "unity default resources" → "unity_default_resources"'
-          } else {
-            Write-Host 'ℹ️ Aucun fichier "unity default resources" à renommer'
-          }
-
-      # 8 – Génère Aura.nuspec ligne par ligne (echo) – évite les soucis YAML
-      - name: Create Aura.nuspec
-        shell: bash
-        run: |
-          VER="${{ steps.vars.outputs.version }}"
-          echo '<?xml version="1.0"?>'                         >  Aura.nuspec
-          echo '<package>'                                      >> Aura.nuspec
-          echo '  <metadata>'                                   >> Aura.nuspec
-          echo '    <id>Aura</id>'                              >> Aura.nuspec
-          echo "    <version>${VER}</version>"                >> Aura.nuspec
-          echo '    <authors>Sealion</authors>'                 >> Aura.nuspec
-          echo '    <description>AURA Unity app (player only) packagée par Squirrel.</description>' >> Aura.nuspec
-          echo '  </metadata>'                                  >> Aura.nuspec
-          echo '  <files>'                                      >> Aura.nuspec
-          echo '    <file src="package/**" target="lib/net45" />' >> Aura.nuspec
-          echo '    <file src="README.md" target="" />'      >> Aura.nuspec
-          echo '  </files>'                                     >> Aura.nuspec
-          echo '</package>'                                     >> Aura.nuspec
-
-      # 8b – README minimal pour NuGet
-      - name: Create README.md
-        run: echo "AURA Unity app packaged (player only)." > README.md
-
-      # 9 – Crée le .nupkg (Unity inclus)
-      - name: NuGet pack
-        run: nuget pack Aura.nuspec -Version ${{ steps.vars.outputs.version }} -OutputDirectory . -NoDefaultExcludes
-
-      # 10 – Installe la dernière version disponible du CLI Squirrel
-      - name: Install Squirrel CLI (latest)
-        run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
-
-      # 11 – Releasify : génère Setup.exe (= bootstrapper Squirrel)
-      - name: Squirrel releasify (Unity only)
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $ver      = '${{ steps.vars.outputs.version }}'
-          $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
-
-          # Dossier de sortie et d'entrée spécifiques pour éviter les nupkg parasites
-          $pkgDir = "Packages"
-          $relDir = "Releases"
-
-          Remove-Item -Recurse -Force $pkgDir,$relDir -ErrorAction Ignore
-          New-Item -ItemType Directory -Path $pkgDir,$relDir | Out-Null
-
-          # Copie uniquement *notre* package dans $pkgDir
-          Move-Item -Force "Aura.$ver.nupkg" $pkgDir/ | Out-Null
-
-          $mainExe = 'Protec.exe'
-
-          Write-Host '📂 Listing working dir before releasify:'
-          Get-ChildItem -Recurse -File | ForEach-Object { Write-Host $_.FullName }
-
-          $args = @(
-            '--releasify', "$pkgDir/Aura.$ver.nupkg",
-            '--packagesDir', $pkgDir,
-            '--releaseDir',  $relDir,
-            '--no-msi',
-            '--exe', $mainExe,
-            '--verbose'
-          )
-
-          Write-Host "▶️  Launching Squirrel.exe… ($($squirrel.FullName))"
-          $proc = Start-Process -FilePath $squirrel.FullName -ArgumentList $args -PassThru -Wait -NoNewWindow
-
-          if ($proc.ExitCode -ne 0) {
-            throw "❌ Squirrel releasify failed (exit code $($proc.ExitCode))"
-          }
-
-          Write-Host '✅ Squirrel releasify completed'
-
-          # On ajoute ensuite l'installateur WPF pré‑compilé au dossier Releases
-          Copy-Item build/Installer/AuraInstaller.exe $relDir/ -Force
-
-      # 12 – Vérification rapide des artéfacts
-      - name: Vérification des fichiers Squirrel
-        shell: pwsh
-        run: |
-          if (-not (Test-Path 'Releases/RELEASES'))          { throw 'RELEASES manquant' }
-          if (-not (Get-ChildItem 'Releases' -Filter '*Setup.exe' | Select-Object -First 1)) { throw 'Setup.exe manquant' }
-          if (-not (Test-Path 'Releases/AuraInstaller.exe')) { throw 'AuraInstaller.exe manquant' }
-          Write-Host '✅ Artéfacts Squirrel OK'
-
-      # 13 – Debug : liste les EXE/NUPKG générés
-      - name: 🔎 Debug build outputs
-        shell: pwsh
-        run: Get-ChildItem -Recurse | Where-Object { $_.Name -match '\.(exe|nupkg)$' }
-
-      # 14 – Attache les artéfacts à la Release GitHub
-      - name: Attach artefacts to GitHub Release
-        if: github.event_name == 'release' && github.event.action == 'published'
-        uses: softprops/action-gh-release@v2
+      - name: ⚙️ Setup .NET 6
+        uses: actions/setup-dotnet@v3
         with:
-          fail_on_unmatched_files: false
-          files: Releases/**
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          dotnet-version: '6.0.x'
+
+      # --------------------------------------------------
+      # 1) Compile l'Updater
+      # --------------------------------------------------
+      - name: 🧱 Restore & Build Updater
+        run: |
+          dotnet restore Updater/AuraInstaller.sln
+          dotnet publish Updater/AuraInstaller.csproj -c Release -o ${{ env.BUILD_DIR }}\Updater
+
+      # --------------------------------------------------
+      # 2) Télécharge le build Unity (Protec.exe etc.)
+      # --------------------------------------------------
+      - name: 📥 Download Unity build zip
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri ${{ env.UNITY_ZIP_URL }} -OutFile unity.zip
+          Expand-Archive -Path unity.zip -DestinationPath ${{ env.BUILD_DIR }}\Game -Force
+
+      # --------------------------------------------------
+      # 3) Génère version.txt (tag courant) dans BuildReady
+      # --------------------------------------------------
+      - name: 🏷️  Generate version.txt
+        run: echo "${{ github.ref_name }}" > ${{ env.BUILD_DIR }}\version.txt
+
+      # --------------------------------------------------
+      # 4) Installe Inno Setup et génère l'installeur
+      # --------------------------------------------------
+      - name: 🧰 Install Inno Setup 6
+        run: choco install innosetup --no-progress
+
+      - name: 📦 Run ISCC
+        run: |
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" \
+            /DMyBuildDir="${{ github.workspace }}\\${{ env.BUILD_DIR }}" \
+            Installer\setup.iss
+
+      # --------------------------------------------------
+      # 5) Publie l'installeur en artefact
+      # --------------------------------------------------
+      - name: ⬆️ Upload installer artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: AuraInstaller
+          path: Installer\Output\*.exe
