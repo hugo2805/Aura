@@ -54,7 +54,9 @@ Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 
 [Files]
-Source: "{#AppSourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "{#MyBuildDir}\Updater\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#MyBuildDir}\Game\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
@@ -65,7 +67,6 @@ Filename: "{app}\{#AppExeName}"; Description: "Lancer {#AppName}"; Flags: nowait
 
 ; ---------- Pages & Branding supplémentaires ----------
 [Code]
-var PageEULA: TWizardPage;
 
 procedure InitializeWizard;
 begin
