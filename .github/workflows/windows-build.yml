@@ -1,9 +1,9 @@
 # .github/workflows/build.yml
 # ------------------------------------------------------------
 # Génère l'installeur Windows à chaque TAG pushé.
-# 1. Compile l'Updater WPF (.NET 6)
+# 1. Compile l'Updater WPF (.NET 8)
 # 2. Télécharge le build Unity zippé depuis ton serveur
-# 3. Décompresse et fusionne Updater + jeu dans BuildReady/
+# 3. Fusionne Updater + jeu dans BuildReady/
 # 4. Lance Inno Setup (ISS) pour créer l'exécutable d'installation
 # 5. Publie l'installeur en tant qu'artefact de workflow
 # ------------------------------------------------------------
@@ -52,8 +52,12 @@ jobs:
       # --------------------------------------------------
       # 3) Génère version.txt (tag courant) dans BuildReady
       # --------------------------------------------------
-      - name: 🏷️  Generate version.txt
-        run: echo "${{ github.ref_name }}" > ${{ env.BUILD_DIR }}\version.txt
+      - name: 🏷️ Generate version.txt
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}" -replace "^refs/tags/", "" -replace "^v", ""
+          Set-Content -Path "${{ env.BUILD_DIR }}\version.txt" -Value $version
+          echo "AppVersion=$version" | Out-File -FilePath $Env:GITHUB_ENV -Append
 
       # --------------------------------------------------
       # 4) Installe Inno Setup et génère l'installeur
@@ -66,8 +70,8 @@ jobs:
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
             /DMyBuildDir="${{ github.workspace }}\${{ env.BUILD_DIR }}" `
+            /DAppVersion=${{ env.AppVersion }} `
             Installer\setup.iss
-
 
       # --------------------------------------------------
       # 5) Publie l'installeur en artefact
