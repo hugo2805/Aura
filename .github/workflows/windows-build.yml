@@ -146,7 +146,7 @@ jobs:
       - name: Install Squirrel CLI (latest)
         run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
 
-      # 11 – Releasify : génère update.exe (= bootstrapper Squirrel)
+      # 11 – Releasify : génère Setup.exe (= bootstrapper Squirrel)
       - name: Squirrel releasify (Unity only)
         shell: pwsh
         run: |
@@ -195,7 +195,7 @@ jobs:
         shell: pwsh
         run: |
           if (-not (Test-Path 'Releases/RELEASES'))          { throw 'RELEASES manquant' }
-          if (-not (Test-Path 'Releases/update.exe'))        { throw 'update.exe manquant' }
+          if (-not (Get-ChildItem 'Releases' -Filter '*Setup.exe' | Select-Object -First 1)) { throw 'Setup.exe manquant' }
           if (-not (Test-Path 'Releases/AuraInstaller.exe')) { throw 'AuraInstaller.exe manquant' }
           Write-Host '✅ Artéfacts Squirrel OK'
 
