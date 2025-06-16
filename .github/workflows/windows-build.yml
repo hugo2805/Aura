@@ -76,26 +76,24 @@ jobs:
           New-Item -ItemType Directory -Force -Path package | Out-Null
           Copy-Item -Recurse build/UnityPlayer/* package/ -Force
 
-      # 8 – Génère Aura.nuspec à la volée
+      # 8 – Génère Aura.nuspec ligne par ligne (echo) – évite les soucis YAML
       - name: Create Aura.nuspec
         shell: bash
         run: |
           VER="${{ steps.vars.outputs.version }}"
-          cat <<EOF > Aura.nuspec
-<?xml version="1.0"?>
-<package>
-  <metadata>
-    <id>Aura</id>
-    <version>${VER}</version>
-    <authors>Sealion</authors>
-    <description>AURA Unity app (player only) packagée par Squirrel.</description>
-  </metadata>
-  <files>
-    <file src="package/**" target="lib" />
-    <file src="README.md" target="" />
-  </files>
-</package>
-EOF
+          echo '<?xml version="1.0"?>'                         >  Aura.nuspec
+          echo '<package>'                                      >> Aura.nuspec
+          echo '  <metadata>'                                   >> Aura.nuspec
+          echo '    <id>Aura</id>'                              >> Aura.nuspec
+          echo "    <version>${VER}</version>"                >> Aura.nuspec
+          echo '    <authors>Sealion</authors>'                 >> Aura.nuspec
+          echo '    <description>AURA Unity app (player only) packagée par Squirrel.</description>' >> Aura.nuspec
+          echo '  </metadata>'                                  >> Aura.nuspec
+          echo '  <files>'                                      >> Aura.nuspec
+          echo '    <file src="package/**" target="lib" />' >> Aura.nuspec
+          echo '    <file src="README.md" target="" />'     >> Aura.nuspec
+          echo '  </files>'                                     >> Aura.nuspec
+          echo '</package>'                                     >> Aura.nuspec
 
       # 8b – README minimal pour NuGet
       - name: Create README.md
@@ -141,8 +139,8 @@ EOF
       - name: Vérification des fichiers Squirrel
         shell: pwsh
         run: |
-          if (-not (Test-Path "Releases/RELEASES"))      { throw "RELEASES manquant" }
-          if (-not (Test-Path "Releases/update.exe"))     { throw "update.exe manquant" }
+          if (-not (Test-Path "Releases/RELEASES"))          { throw "RELEASES manquant" }
+          if (-not (Test-Path "Releases/update.exe"))        { throw "update.exe manquant" }
           if (-not (Test-Path "Releases/AuraInstaller.exe")) { throw "AuraInstaller.exe manquant" }
           Write-Host "✅ Artéfacts Squirrel OK"
 
