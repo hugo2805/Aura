@@ -71,7 +71,7 @@ jobs:
       # 5) Publie l'installeur en artefact
       # --------------------------------------------------
       - name: ⬆️ Upload installer artifact
-        - uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: AuraInstaller
           path: Installer\Output\*.exe
