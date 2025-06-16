@@ -55,12 +55,11 @@ Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 
 [Files]
 Source: "{#MyBuildDir}\Updater\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{#MyBuildDir}\Updater\Assets\*"; DestDir: "{app}\Assets"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#MyBuildDir}\Game\*";    DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#MyBuildDir}\version.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{commondesktop}\Aura"; Filename: "{app}\AuraInstaller.exe"; IconFilename: "{app}\Assets\logo.ico"
+Name: "{commondesktop}\Aura"; Filename: "{app}\AuraInstaller.exe"; IconFilename: "{app}\logo.ico"
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "Lancer {#AppName}"; Flags: nowait postinstall
