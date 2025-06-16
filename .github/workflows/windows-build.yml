@@ -143,17 +143,16 @@ jobs:
             '--verbose'
           )
 
-          Write-Host ">> Running: $($squirrel.FullName) $($args -join ' ')"
-          Write-Host '🟡 Before calling Squirrel.exe'
-          & $squirrel.FullName @args
-          $exitCode = $LASTEXITCODE
-          Write-Host '🟢 After calling Squirrel.exe'
+          Write-Host "▶️  Launching Squirrel.exe… ($($squirrel.FullName))"
+          $proc = Start-Process -FilePath $squirrel.FullName -ArgumentList $args -PassThru -Wait -NoNewWindow
 
-          if ($exitCode -ne 0) {
-            Write-Error "❌ Squirrel releasify failed with exit code $exitCode"
-            throw "Squirrel releasify failed ($exitCode)"
+          if ($proc.ExitCode -ne 0) {
+            throw "❌ Squirrel releasify failed (exit code $($proc.ExitCode))"
           }
 
+          Write-Host '✅ Squirrel releasify completed'
+
+          # On ajoute ensuite l'installateur WPF pré‑compilé au dossier Releases
           Copy-Item build/Installer/AuraInstaller.exe Releases/ -Force
 
       # 12 – Vérification rapide des artéfacts
