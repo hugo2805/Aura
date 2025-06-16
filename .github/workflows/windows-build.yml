@@ -83,6 +83,11 @@ jobs:
           # Copie le reste du contenu
           Copy-Item -Recurse build/UnityPlayer/* package/ -Force
 
+          # Supprime les éventuels doublons de Protec.exe dans les sous-dossiers (Squirrel échoue si plusieurs exe identiques)
+          Get-ChildItem package -Recurse -Filter Protec.exe |
+            Where-Object { $_.DirectoryName -ne (Resolve-Path package).Path } |
+            Remove-Item -Force
+
       # 8 – Génère Aura.nuspec ligne par ligne (echo) – évite les soucis YAML
       - name: Create Aura.nuspec
         shell: bash
