@@ -72,8 +72,4 @@ begin
   WizardForm.MainPanel.Color := $2A2A2A;  // fond sombre façon Discord
   WizardForm.WelcomeLabel1.Font.Color := $F4F4F4;
   WizardForm.WelcomeLabel2.Font.Color := $E67E22;
-
-  ;PageEULA := CreateCustomPage(wpWelcome,
-        ;'Contrat de licence', 'Merci de prendre connaissance de la licence :');
-  ;TNewMemo.Create(PageEULA.Surface).Lines.LoadFromFile('assets\\EULA.txt');
 end;
