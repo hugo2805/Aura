@@ -18,7 +18,7 @@ on:
 
 env:
   ZIP_NAME_TEMPLATE: Aura.zip        # nom du build Unity compressé
-  SQUIRREL_VERSION: 1.10.0           # ⚠️  version 2.x jette une erreur OPC avec les fichiers Unity contenant des espaces
+  SQUIRREL_VERSION: 1.9.1           # ⚠️  version 2.x jette une erreur OPC avec les fichiers Unity contenant des espaces
 
 jobs:
   windows:
