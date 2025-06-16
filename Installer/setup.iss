@@ -63,3 +63,8 @@ Name: "{commondesktop}\Aura"; Filename: "{app}\AuraInstaller.exe"; IconFilename:
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "Lancer {#AppName}"; Flags: nowait postinstall
+
+[Dirs]
+; crée (ou modifie) le dossier et donne “Modify” au groupe Users
+Name: "{app}"; Permissions: users-modify
+
