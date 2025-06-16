@@ -115,7 +115,7 @@ jobs:
       - name: NuGet pack
         run: nuget pack Aura.nuspec -Version ${{ steps.vars.outputs.version }} -OutputDirectory . -NoDefaultExcludes
 
-      # 10 – Installe une version *2.1* de l’outil CLI Squirrel
+      # 10 – Installe la dernière version disponible du CLI Squirrel
       - name: Install Squirrel CLI (latest)
         run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
 
@@ -127,11 +127,15 @@ jobs:
           $ver      = '${{ steps.vars.outputs.version }}'
           $squirrel = Get-ChildItem tools -Recurse -Filter Squirrel.exe | Select-Object -First 1
 
-          Remove-Item -Recurse -Force Releases -ErrorAction Ignore
-          New-Item -ItemType Directory -Path Releases | Out-Null
+          # Dossier de sortie et d'entrée spécifiques pour éviter les nupkg parasites
+          $pkgDir = "Packages"
+          $relDir = "Releases"
 
-          # Nettoyage préalable pour éviter les conflits avec des anciens .nupkg
-          Remove-Item Releases/*.nupkg -Force -ErrorAction Ignore
+          Remove-Item -Recurse -Force $pkgDir,$relDir -ErrorAction Ignore
+          New-Item -ItemType Directory -Path $pkgDir,$relDir | Out-Null
+
+          # Copie uniquement *notre* package dans $pkgDir
+          Move-Item -Force "Aura.$ver.nupkg" $pkgDir/ | Out-Null
 
           $mainExe = 'Protec.exe'
 
@@ -139,8 +143,9 @@ jobs:
           Get-ChildItem -Recurse -File | ForEach-Object { Write-Host $_.FullName }
 
           $args = @(
-            '--releasify', "Aura.$ver.nupkg",
-            '--releaseDir', 'Releases',
+            '--releasify', "$pkgDir/Aura.$ver.nupkg",
+            '--packagesDir', $pkgDir,
+            '--releaseDir',  $relDir,
             '--no-msi',
             '--exe', $mainExe,
             '--verbose'
@@ -156,7 +161,7 @@ jobs:
           Write-Host '✅ Squirrel releasify completed'
 
           # On ajoute ensuite l'installateur WPF pré‑compilé au dossier Releases
-          Copy-Item build/Installer/AuraInstaller.exe Releases/ -Force
+          Copy-Item build/Installer/AuraInstaller.exe $relDir/ -Force
 
       # 12 – Vérification rapide des artéfacts
       - name: Vérification des fichiers Squirrel
