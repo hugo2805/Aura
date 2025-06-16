@@ -27,7 +27,7 @@ jobs:
       - name: ⬇️ Checkout repository
         uses: actions/checkout@v3
 
-      - name: ⚙️ Setup .NET 6
+      - name: ⚙️ Setup .NET 8
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '8.0.x'
@@ -62,16 +62,18 @@ jobs:
         run: choco install innosetup --no-progress
 
       - name: 📦 Run ISCC
+        shell: pwsh
         run: |
-          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" \
-            /DMyBuildDir="${{ github.workspace }}\\${{ env.BUILD_DIR }}" \
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            /DMyBuildDir="${{ github.workspace }}\${{ env.BUILD_DIR }}" `
             Installer\setup.iss
+
 
       # --------------------------------------------------
       # 5) Publie l'installeur en artefact
       # --------------------------------------------------
       - name: ⬆️ Upload installer artifact
-        uses: actions/upload-artifact@v4
+        - uses: actions/upload-artifact@v4
         with:
           name: AuraInstaller
           path: Installer\Output\*.exe
