@@ -17,7 +17,8 @@ on:
 # ---------------------------------------------------------------------------
 
 env:
-  ZIP_NAME_TEMPLATE: Aura.zip   # nom du build Unity compressé
+  ZIP_NAME_TEMPLATE: Aura.zip        # nom du build Unity compressé
+  SQUIRREL_VERSION: 1.10.0           # ⚠️  version 2.x jette une erreur OPC avec les fichiers Unity contenant des espaces
 
 jobs:
   windows:
@@ -103,7 +104,7 @@ jobs:
           echo '  </metadata>'                                  >> Aura.nuspec
           echo '  <files>'                                      >> Aura.nuspec
           echo '    <file src="package/**" target="lib/net45" />' >> Aura.nuspec
-          echo '    <file src="README.md" target="" />'     >> Aura.nuspec
+          echo '    <file src="README.md" target="" />'      >> Aura.nuspec
           echo '  </files>'                                     >> Aura.nuspec
           echo '</package>'                                     >> Aura.nuspec
 
@@ -115,9 +116,9 @@ jobs:
       - name: NuGet pack
         run: nuget pack Aura.nuspec -Version ${{ steps.vars.outputs.version }} -OutputDirectory . -NoDefaultExcludes
 
-      # 10 – Installe l’outil CLI Squirrel
+      # 10 – Installe une version *1.x* de l’outil CLI Squirrel (la 2.x plante avec OPC)
       - name: Install Squirrel CLI
-        run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
+        run: nuget install squirrel.windows -Version ${{ env.SQUIRREL_VERSION }} -OutputDirectory tools -Verbosity quiet
 
       # 11 – Releasify : génère update.exe (= bootstrapper Squirrel)
       - name: Squirrel releasify (Unity only)
