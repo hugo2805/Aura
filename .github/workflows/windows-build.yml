@@ -77,7 +77,7 @@ jobs:
       #        (nécessite secrets REMOTE_HOST / REMOTE_USER / REMOTE_SSH_KEY)
       # --------------------------------------------------
       - name: 🌐 Upload version.txt to remote storage
-        if: secrets.REMOTE_HOST != ''
+        if: ${{ secrets.REMOTE_HOST != '' }}
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.REMOTE_HOST }}
