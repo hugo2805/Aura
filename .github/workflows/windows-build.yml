@@ -30,7 +30,7 @@ jobs:
       - name: ⚙️ Setup .NET 6
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '6.0.x'
+          dotnet-version: '8.0.x'
 
       # --------------------------------------------------
       # 1) Compile l'Updater
@@ -71,7 +71,7 @@ jobs:
       # 5) Publie l'installeur en artefact
       # --------------------------------------------------
       - name: ⬆️ Upload installer artifact
-        uses: actions/upload-artifact@v3
+        - uses: actions/upload-artifact@v4
         with:
           name: AuraInstaller
           path: Installer\Output\*.exe
