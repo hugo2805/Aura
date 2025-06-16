@@ -4,10 +4,11 @@
 # 1. Compile l'Updater WPF (.NET 8)
 # 2. Télécharge le build Unity zippé depuis le serveur perso
 # 3. Fusionne Updater + jeu + version.txt dans BuildReady/
-# 4. Exécute Inno Setup pour créer `Aura_Setup.exe`
-# 5. Publie l'exécutable **à la fois** :
-#    • comme artefact du workflow (pratique pour debug)
-#    • comme asset de la Release GitHub correspondante (visible par les utilisateurs)
+# 4. Met à jour le **version.txt** sur le serveur distant
+# 5. Exécute Inno Setup pour créer `Aura_Setup.exe`
+# 6. Publie l'exécutable :
+#    • artefact de workflow (debug)
+#    • asset de la Release GitHub correspondante (prod)
 # ------------------------------------------------------------
 
 name: Build Windows Installer
@@ -17,6 +18,7 @@ on:
     tags:
       - "*"   # tout tag déclenche le build
 
+# IMPORTANT pour pouvoir attacher l'exécutable à la Release
 permissions:
   contents: write
 
@@ -24,7 +26,6 @@ jobs:
   build:
     runs-on: windows-latest
 
-    # Variables d'environnement communes au job
     env:
       UNITY_ZIP_URL: "https://build.sealion.fr/updates/Aura.zip"  # URL du zip Unity
       BUILD_DIR: BuildReady                                       # dossier temporaire local
@@ -72,6 +73,21 @@ jobs:
           echo "AppVersion=$version" | Out-File -FilePath $Env:GITHUB_ENV -Append
 
       # --------------------------------------------------
+      # 4-bis) Pousse version.txt sur le serveur de mises à jour
+      #        (nécessite secrets REMOTE_HOST / REMOTE_USER / REMOTE_SSH_KEY)
+      # --------------------------------------------------
+      - name: 🌐 Upload version.txt to remote storage
+        if: secrets.REMOTE_HOST != ''
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.REMOTE_SSH_KEY }}
+          port: ${{ '22' }}
+          source: "${{ env.BUILD_DIR }}/version.txt"
+          target: ${{ secrets.REMOTE_DIR || '/var/www/updates/' }}
+
+      # --------------------------------------------------
       # 5) Installe Inno Setup 6 (si pas déjà présent)
       # --------------------------------------------------
       - name: 🧰 Install Inno Setup 6
@@ -89,9 +105,7 @@ jobs:
             Installer\setup.iss
 
       # --------------------------------------------------
-      # 7) Publie l'EXE :
-      #    a) Artefact de workflow (toujours)
-      #    b) Asset attaché à la Release GitHub (visible utilisateurs)
+      # 7) Publie l'EXE
       # --------------------------------------------------
       - name: ⬆️ Upload installer artifact
         uses: actions/upload-artifact@v4
@@ -103,7 +117,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: Aura_Setup.exe
-          tag_name: ${{ github.ref_name }}   # crée la release si inexistante
+          tag_name: ${{ github.ref_name }}
           files: Installer/Output/Aura_Setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
