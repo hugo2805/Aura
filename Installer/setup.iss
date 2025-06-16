@@ -56,21 +56,11 @@ Name: "ukrainian"; MessagesFile: "compiler:Languages\Ukrainian.isl"
 [Files]
 Source: "{#MyBuildDir}\Updater\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#MyBuildDir}\Game\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#MyBuildDir}\\version.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
-Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}";
+Name: "{commondesktop}\\Aura"; Filename: "{app}\\AuraInstaller.exe"; IconFilename: "{app}\\Assets\\logo.ico"
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "Lancer {#AppName}"; Flags: nowait postinstall
-
-; ---------- Pages & Branding supplémentaires ----------
-[Code]
-
-procedure InitializeWizard;
-begin
-  WizardForm.MainPanel.Color := $2A2A2A;  // fond sombre façon Discord
-  WizardForm.WelcomeLabel1.Font.Color := $F4F4F4;
-  WizardForm.WelcomeLabel2.Font.Color := $E67E22;
-end;
