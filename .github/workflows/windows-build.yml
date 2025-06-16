@@ -130,7 +130,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Squirrel releasify failed ($LASTEXITCODE)" }
 
           # --------------------------------------------------------------
-          # ➜ Copie AuraInstaller.exe à côté de update.exe (même dossier)
+          # ➔ Copie AuraInstaller.exe à côté de update.exe (même dossier)
           #    ainsi le lanceur WPF pourra appeler update.exe au runtime.
           # --------------------------------------------------------------
           Copy-Item build/Installer/AuraInstaller.exe Releases/ -Force
@@ -147,7 +147,7 @@ jobs:
       # 13 – Debug : liste les EXE/NUPKG générés
       - name: 🔎 Debug build outputs
         shell: pwsh
-        run: Get-ChildItem -Recurse | Where-Object { $_.Name -match '\.(exe|nupkg)$' }
+        run: Get-ChildItem -Recurse | Where-Object { $_.Name -match '\\.(exe|nupkg)$' }
 
       # 14 – Attache les artéfacts à la Release GitHub
       - name: Attach artefacts to GitHub Release
