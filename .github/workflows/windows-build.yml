@@ -73,20 +73,6 @@ jobs:
           echo "AppVersion=$version" | Out-File -FilePath $Env:GITHUB_ENV -Append
 
       # --------------------------------------------------
-      # 4-bis) Pousse version.txt sur le serveur de mises à jour
-      #        (nécessite secrets REMOTE_HOST / REMOTE_USER / REMOTE_SSH_KEY)
-      # --------------------------------------------------
-      - name: 🌐 Upload version.txt to remote storage
-        uses: appleboy/scp-action@v0.1.4
-        with:
-          host: "access937775265.webspace-data.io"
-          username: "acc138818365"
-          key: "rg9s6ka3mTrCCKbt"
-          port: "22"
-          source: "${{ env.BUILD_DIR }}/version.txt"
-          target: ""
-
-      # --------------------------------------------------
       # 5) Installe Inno Setup 6 (si pas déjà présent)
       # --------------------------------------------------
       - name: 🧰 Install Inno Setup 6
