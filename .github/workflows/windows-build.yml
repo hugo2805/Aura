@@ -102,6 +102,19 @@ jobs:
           }
           Write-Host '✅ Aucun chemin invalide détecté'
 
+      # 7c – Renomme le fichier problématique "unity default resources" (invalide pour OPC) → "unity_default_resources"
+      - name: Fix Unity resources file name
+        shell: pwsh
+        run: |
+          $targetDir = "package/Protec_Data/Resources"
+          $file = Get-ChildItem -Path $targetDir -Filter "unity default resources" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($file) {
+            Rename-Item -Path $file.FullName -NewName 'unity_default_resources'
+            Write-Host '✅ Renamed "unity default resources" → "unity_default_resources"'
+          } else {
+            Write-Host 'ℹ️ Aucun fichier "unity default resources" à renommer'
+          }
+
       # 8 – Génère Aura.nuspec ligne par ligne (echo) – évite les soucis YAML
       - name: Create Aura.nuspec
         shell: bash
@@ -189,7 +202,7 @@ jobs:
       # 13 – Debug : liste les EXE/NUPKG générés
       - name: 🔎 Debug build outputs
         shell: pwsh
-        run: Get-ChildItem -Recurse | Where-Object { $_.Name -match '\\.(exe|nupkg)$' }
+        run: Get-ChildItem -Recurse | Where-Object { $_.Name -match '\.(exe|nupkg)$' }
 
       # 14 – Attache les artéfacts à la Release GitHub
       - name: Attach artefacts to GitHub Release
