@@ -62,7 +62,7 @@ Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
 Name: "{commondesktop}\Aura"; \
       Filename: "{app}\AuraInstaller.exe"; \
-      IconFilename: "logo.ico"; \
+      IconFilename: "{app}\logo.ico"; \
       WorkingDir: "{app}"
 
 [Run]
