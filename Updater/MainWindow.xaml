@@ -1,0 +1,42 @@
+﻿<Window x:Class="AuraUpdater.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None" AllowsTransparency="True" ResizeMode="NoResize"
+        Background="Transparent" Width="380" Height="280">
+    <Grid>
+        <!-- Image de fond fixe -->
+        <Image Source="/Assets/bkgd.png" Stretch="Fill" />
+
+
+        <!-- Aiguille qui tourne au centre -->
+        <Image Source="/Assets/Aiguille.png"
+               Width="8" Height="35"
+               RenderTransformOrigin="0.5,0.5"
+               HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,144,0,0">
+            <Image.RenderTransform>
+                <RotateTransform x:Name="NeedleRotation" Angle="0"/>
+            </Image.RenderTransform>
+            <Image.Triggers>
+                <EventTrigger RoutedEvent="Image.Loaded">
+                    <BeginStoryboard>
+                        <Storyboard RepeatBehavior="Forever">
+                            <!-- Animation impulsionnelle : accélération puis freinage, comme Discord -->
+                            <DoubleAnimation Storyboard.TargetName="NeedleRotation"
+                                             Storyboard.TargetProperty="Angle"
+                                             From="0" To="360" Duration="0:0:1.8"
+                                             AccelerationRatio="0.25" DecelerationRatio="0.75" />
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Image.Triggers>
+        </Image>
+
+        <!-- Zone info UI en bas -->
+        <StackPanel VerticalAlignment="Bottom" Margin="0,0,0,5" HorizontalAlignment="Center">
+            <TextBlock x:Name="Status" Text="Vérification des mises à jour…"
+                       Foreground="White" FontSize="14" HorizontalAlignment="Center"/>
+            <ProgressBar x:Name="Bar" Width="300" Height="8" Margin="0,16,0,0"/>
+            <TextBlock x:Name="Pct" Text="0 %" Foreground="#CCCCCC" FontSize="12" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+        </StackPanel>
+    </Grid>
+</Window>
