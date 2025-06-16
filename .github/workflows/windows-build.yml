@@ -71,18 +71,10 @@ jobs:
         shell: pwsh
         run: |
           # -----------------------------------------------------------------
-          # 1) Player Unity complet   → package/UnityPlayer/…
-          # 2) AuraInstaller.exe (+ .pdb) → package/
+          # 1) Player Unity complet   → package/…
           # -----------------------------------------------------------------
           New-Item -ItemType Directory -Force -Path package | Out-Null
-
           Copy-Item -Recurse build/UnityPlayer/* package/ -Force
-
-          $exe = Get-ChildItem build/Installer -Recurse -Filter AuraInstaller.exe | Select-Object -First 1
-          if (-not $exe) { throw "AuraInstaller.exe introuvable dans le ZIP !" }
-
-          Copy-Item $exe.FullName package/ -Force
-          Copy-Item ($exe.FullName -replace '\.exe$','\.pdb') package/ -ErrorAction SilentlyContinue
 
       # 8 – Génère Aura.nuspec à la volée
       - name: Create Aura.nuspec
@@ -96,7 +88,7 @@ jobs:
             echo '    <id>Aura</id>'
             echo "    <version>${VER}</version>"
             echo '    <authors>Sealion</authors>'
-            echo '    <description>AURA Unity app (player + WPF installer) packagée par Squirrel.</description>'
+            echo '    <description>AURA Unity app (player only) packagée par Squirrel.</description>'
             echo '  </metadata>'
             echo '  <files>'
             echo '    <file src="package/**" target="lib" />'
@@ -107,7 +99,7 @@ jobs:
 
       # 8b – README minimal pour NuGet
       - name: Create README.md
-        run: echo "AURA Unity app packaged with a custom WPF installer." > README.md
+        run: echo "AURA Unity app packaged (player only)." > README.md
 
       # 9 – Crée le .nupkg (Unity inclus)
       - name: NuGet pack
@@ -117,8 +109,8 @@ jobs:
       - name: Install Squirrel CLI
         run: nuget install squirrel.windows -OutputDirectory tools -Verbosity quiet
 
-      # 11 – Releasify : génère AuraSetup.exe + RELEASES + delta patches
-      - name: Squirrel releasify (Unity included)
+      # 11 – Releasify : génère update.exe (bootstrapped par AuraInstaller)
+      - name: Squirrel releasify with custom installer
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -132,8 +124,7 @@ jobs:
             "--releasify", "Aura.$ver.nupkg",
             "--releaseDir", "Releases",
             "--no-msi",
-            "--bootstrapperExe", "AuraSetup.exe",
-            "--exe", "AuraInstaller.exe",
+            "--bootstrapperExe", "build/Installer/AuraInstaller.exe",
             "--verbose"
           )
 
@@ -141,12 +132,12 @@ jobs:
           & $squirrel.FullName @args
           if ($LASTEXITCODE -ne 0) { throw "Squirrel releasify failed ($LASTEXITCODE)" }
 
-      # 12 – Vérification rapide des artefacts
+      # 12 – Vérification rapide des artéfacts
       - name: Vérification des fichiers Squirrel
         shell: pwsh
         run: |
           if (-not (Test-Path "Releases/RELEASES")) { throw "RELEASES manquant" }
-          if (-not (Test-Path "Releases/AuraSetup.exe")) { throw "AuraSetup.exe manquant" }
+          if (-not (Test-Path "Releases/update.exe")) { throw "update.exe manquant" }
           Write-Host "✅ Artéfacts Squirrel OK"
 
       # 13 – Debug : liste les EXE/NUPKG générés
@@ -154,7 +145,7 @@ jobs:
         shell: pwsh
         run: Get-ChildItem -Recurse | Where-Object { $_.Name -like '*.exe' -or $_.Name -like '*.nupkg' }
 
-      # 14 – Attache les artefacts à la Release GitHub
+      # 14 – Attache les artéfacts à la Release GitHub
       - name: Attach artefacts to GitHub Release
         if: github.event_name == 'release' && github.event.action == 'published'
         uses: softprops/action-gh-release@v2
