@@ -12,7 +12,7 @@ public partial class MainWindow : Window
 {
     private const string remoteVersionUrl = "https://build.sealion.fr/updates/version.txt";
     private const string remoteZipUrl = "https://build.sealion.fr/updates/Aura.zip";
-    private const string localExe = "Protec.exe";
+    private const string localExe = "AURA - Prototype";
 
     public MainWindow()
     {
