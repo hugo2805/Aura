@@ -61,6 +61,7 @@ Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; Dépendances SQLite
 Source: "Installer\Dependencies\sqlite3.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Installer\Dependencies\System.Data.SQLite.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Installer\Dependencies\windowsdesktop-runtime-8.0.16-win-x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
 Name: "{commondesktop}\Aura"; \
@@ -70,8 +71,18 @@ Name: "{commondesktop}\Aura"; \
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "Lancer {#AppName}"; Flags: nowait postinstall
+Filename: "{tmp}\windowsdesktop-runtime-8.0.17-win-x64.exe"; \
+  Parameters: "/install /quiet /norestart"; \
+  StatusMsg: "Installation de .NET Desktop Runtime 8..."; \
+  Check: NeedsDotNet
 
 [Dirs]
 ; crée (ou modifie) le dossier et donne “Modify” au groupe Users
 Name: "{app}"; Permissions: users-modify
+
+[Code]
+function NeedsDotNet: Boolean;
+begin
+  Result := not RegKeyExists(HKEY_LOCAL_MACHINE, 'SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full');
+end;
 
