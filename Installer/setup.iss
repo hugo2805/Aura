@@ -61,7 +61,7 @@ Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; Dépendances SQLite
 Source: "Dependencies\sqlite3.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Dependencies\System.Data.SQLite.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "Dependencies\windowsdesktop-runtime-8.0.16-win-x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "Dependencies\windowsdesktop-runtime-8.0.17-win-x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
 Name: "{commondesktop}\Aura"; \
