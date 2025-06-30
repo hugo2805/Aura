@@ -59,8 +59,8 @@ Source: "{#MyBuildDir}\Game\*";    DestDir: "{app}"; Flags: ignoreversion recurs
 Source: "{#MyBuildDir}\version.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; Dépendances SQLite
-Source: "Installer\sqlite3.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "Installer\System.Data.SQLite.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Installer\Dependencies\sqlite3.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Installer\Dependencies\System.Data.SQLite.dll"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{commondesktop}\Aura"; \
