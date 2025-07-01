@@ -82,7 +82,16 @@ Name: "{app}"; Permissions: users-modify
 
 [Code]
 function NeedsDotNet: Boolean;
+var
+  InstallPath: string;
 begin
-  Result := not RegKeyExists(HKEY_LOCAL_MACHINE, 'SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full');
+  // Vérifie si le runtime .NET Desktop 8.0.17 est installé
+  Result := not RegQueryStringValue(
+    HKEY_LOCAL_MACHINE,
+    'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedhost',
+    'Version',
+    InstallPath
+  ) or (InstallPath < '8.0.17');
 end;
+
 
