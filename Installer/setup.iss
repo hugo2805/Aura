@@ -59,8 +59,8 @@ Source: "{#MyBuildDir}\Game\*";    DestDir: "{app}"; Flags: ignoreversion recurs
 Source: "{#MyBuildDir}\version.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; Dépendances SQLite
-Source: "Dependencies\sqlite3.dll"; DestDir: "{app}\AURA - Prototype_Data\Plugins\x86_64"; Flags: ignoreversion overwritealways
-Source: "Dependencies\System.Data.SQLite.dll"; DestDir: "{app}\AURA - Prototype_Data\Plugins\x86_64"; Flags: ignoreversion overwritealways
+Source: "Dependencies\sqlite3.dll"; DestDir: "{app}\AURA - Prototype_Data\Plugins\x86_64"; Flags: ignoreversion onlyifdestfileexists
+Source: "Dependencies\System.Data.SQLite.dll"; DestDir: "{app}\AURA - Prototype_Data\Plugins\x86_64"; Flags: ignoreversion onlyifdestfileexists
 Source: "Dependencies\windowsdesktop-runtime-8.0.17-win-x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
