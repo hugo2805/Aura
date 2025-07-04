@@ -59,8 +59,9 @@ Source: "{#MyBuildDir}\Game\*";    DestDir: "{app}"; Flags: ignoreversion recurs
 Source: "{#MyBuildDir}\version.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; Dépendances SQLite
-Source: "Installer\sqlite3.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "Installer\System.Data.SQLite.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Dependencies\sqlite3.dll"; DestDir: "{app}\AURA - Prototype_Data\Plugins\x86_64"; Flags: ignoreversion 
+Source: "Dependencies\System.Data.SQLite.dll"; DestDir: "{app}\AURA - Prototype_Data\Plugins\x86_64"; Flags: ignoreversion 
+Source: "Dependencies\windowsdesktop-runtime-8.0.17-win-x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
 Name: "{commondesktop}\Aura"; \
@@ -70,8 +71,27 @@ Name: "{commondesktop}\Aura"; \
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "Lancer {#AppName}"; Flags: nowait postinstall
+Filename: "{tmp}\windowsdesktop-runtime-8.0.17-win-x64.exe"; \
+  Parameters: "/install /quiet /norestart"; \
+  StatusMsg: "Installation de .NET Desktop Runtime 8..."; \
+  Check: NeedsDotNet
 
 [Dirs]
 ; crée (ou modifie) le dossier et donne “Modify” au groupe Users
 Name: "{app}"; Permissions: users-modify
+
+[Code]
+function NeedsDotNet: Boolean;
+var
+  InstallPath: string;
+begin
+  // Vérifie si le runtime .NET Desktop 8.0.17 est installé
+  Result := not RegQueryStringValue(
+    HKEY_LOCAL_MACHINE,
+    'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedhost',
+    'Version',
+    InstallPath
+  ) or (InstallPath < '8.0.17');
+end;
+
 
