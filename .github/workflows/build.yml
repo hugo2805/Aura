@@ -95,13 +95,14 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           files: |
-            ${{ env.PACK_DIR }}\AuraInstaller-*-win-Setup.exe
+            ${{ env.PACK_DIR }}\AuraInstaller-Setup.exe
             ${{ env.PACK_DIR }}\AuraInstaller-*-full.nupkg
             ${{ env.PACK_DIR }}\RELEASES
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Déployer sur build.sealion.fr (releases/win/)
+        if: ${{ secrets.DEPLOY_KEY != '' }}
         shell: bash
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
@@ -183,13 +184,14 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           files: |
-            ${{ env.PACK_DIR }}/AuraInstaller-*-linux-Portable.AppImage
-            ${{ env.PACK_DIR }}/AuraInstaller-*-full.nupkg
-            ${{ env.PACK_DIR }}/RELEASES
+            ${{ env.PACK_DIR }}/AuraInstaller-linux-Portable.AppImage
+            ${{ env.PACK_DIR }}/AuraInstaller-*-linux-full.nupkg
+            ${{ env.PACK_DIR }}/RELEASES-linux
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Déployer sur build.sealion.fr (releases/linux/)
+        if: ${{ secrets.DEPLOY_KEY != '' }}
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
