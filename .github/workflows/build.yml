@@ -101,20 +101,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Déployer sur build.sealion.fr (releases/win/)
-        if: ${{ secrets.DEPLOY_KEY != '' }}
-        shell: bash
-        env:
-          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan build.sealion.fr >> ~/.ssh/known_hosts
-          rsync -avz \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
-            "VelopackOut/win/" \
-            deploy@build.sealion.fr:/var/www/build.sealion.fr/releases/win/
 
   # ================================================================
   # JOB LINUX — AppImage Velopack
@@ -189,17 +175,3 @@ jobs:
             ${{ env.PACK_DIR }}/RELEASES-linux
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Déployer sur build.sealion.fr (releases/linux/)
-        if: ${{ secrets.DEPLOY_KEY != '' }}
-        env:
-          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan build.sealion.fr >> ~/.ssh/known_hosts
-          rsync -avz \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
-            "${{ env.PACK_DIR }}/" \
-            deploy@build.sealion.fr:/var/www/build.sealion.fr/releases/linux/
