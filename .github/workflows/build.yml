@@ -169,12 +169,15 @@ jobs:
             --outputDir   "${{ env.PACK_DIR }}" \
             --mainExe     "AuraInstaller"
 
+      - name: Lister les fichiers générés (debug)
+        run: ls -lh "${{ env.PACK_DIR }}"
+
       - name: Publier sur GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           files: |
-            ${{ env.PACK_DIR }}/AuraInstaller-linux-Portable.AppImage
+            ${{ env.PACK_DIR }}/*.AppImage
             ${{ env.PACK_DIR }}/AuraInstaller-*-linux-full.nupkg
             ${{ env.PACK_DIR }}/RELEASES-linux
         env:
