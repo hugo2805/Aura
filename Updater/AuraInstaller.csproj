@@ -1,28 +1,33 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- WinExe sur Windows (pas de fenêtre console), Exe sur Linux -->
+    <OutputType Condition="'$(RuntimeIdentifier)' == 'win-x64'">WinExe</OutputType>
+    <OutputType Condition="'$(RuntimeIdentifier)' != 'win-x64'">Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia"               Version="11.2.7" />
+    <PackageReference Include="Avalonia.Desktop"       Version="11.2.7" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.7" />
+    <PackageReference Include="Velopack"               Version="0.0.1298" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="AssemblyInfo.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Assets\Aiguille.png" />
-    <None Remove="Assets\bkgd.png" />
-  </ItemGroup>
-
-	<ItemGroup>
-    <Resource Include="AssemblyInfo.cs">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Resource>
-    <Resource Include="Assets\Aiguille.png" />
-    <Resource Include="Assets\bkgd.png" />
+    <AvaloniaResource Include="Assets\Aiguille.png" />
+    <AvaloniaResource Include="Assets\bkgd.png" />
   </ItemGroup>
 
 </Project>

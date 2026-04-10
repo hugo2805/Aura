@@ -1,0 +1,34 @@
+# Build outputs
+bin/
+obj/
+
+# Rider / JetBrains IDE
+.idea/
+*.user
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# .NET
+*.dll
+*.exe
+*.pdb
+*.nupkg
+*.snupkg
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Velopack local output
+VelopackOut/
+BuildReady/
+
+.resS

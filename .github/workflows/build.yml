@@ -1,0 +1,203 @@
+# .github/workflows/build.yml
+# ------------------------------------------------------------------
+# Produit les installeurs Windows (Setup.exe Velopack) et Linux
+# (AppImage Velopack) à chaque push de tag (ex. v1.2.3).
+#
+# Artefacts générés :
+#   Windows → AuraInstaller-<version>-win-Setup.exe
+#   Linux   → AuraInstaller-<version>-linux-Portable.AppImage
+#
+# Les fichiers de release Velopack (nupkg + RELEASES) sont aussi
+# uploadés sur GitHub Release ET déployés sur build.sealion.fr
+# pour que l'UpdateManager du launcher puisse les consommer.
+#
+# Secret requis : DEPLOY_KEY (clé SSH privée, clé publique dans
+# ~/.ssh/authorized_keys de l'utilisateur deploy@build.sealion.fr)
+# ------------------------------------------------------------------
+
+name: Build & Release (Windows + Linux)
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write   # nécessaire pour créer/modifier la GitHub Release
+
+jobs:
+
+  # ================================================================
+  # JOB WINDOWS — Setup.exe Velopack
+  # ================================================================
+  build-windows:
+    runs-on: windows-latest
+
+    env:
+      UNITY_ZIP_URL: "https://build.sealion.fr/updates/Aura.zip"
+      BUILD_DIR:     "BuildReady"
+      PACK_DIR:      "VelopackOut\\win"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Install Velopack CLI (vpk)
+        run: dotnet tool install -g vpk
+
+      - name: Extraire la version depuis le tag (v1.2.3 → 1.2.3)
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}" -replace "^v", ""
+          echo "APP_VERSION=$v" | Out-File -FilePath $Env:GITHUB_ENV -Append
+
+      - name: Restore & publish (win-x64, self-contained)
+        run: |
+          dotnet restore Updater/AuraInstaller.sln
+          dotnet publish Updater/AuraInstaller.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -o "${{ env.BUILD_DIR }}\Updater"
+
+      - name: Télécharger le build Unity
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "${{ env.UNITY_ZIP_URL }}" -OutFile unity.zip
+          Expand-Archive -Path unity.zip -DestinationPath "${{ env.BUILD_DIR }}\Game" -Force
+
+      - name: Fusionner Updater + Game dans le dossier source du paquet
+        shell: pwsh
+        run: |
+          $pkg = "${{ env.BUILD_DIR }}\PkgSrc"
+          New-Item -ItemType Directory -Force -Path $pkg
+          Copy-Item "${{ env.BUILD_DIR }}\Updater\*" $pkg -Recurse -Force
+          Copy-Item "${{ env.BUILD_DIR }}\Game\*"    $pkg -Recurse -Force
+          # version.txt du jeu (pas du launcher — géré par Velopack séparément)
+          Set-Content -Path "$pkg\version.txt" -Value "0.0.0"
+
+      - name: vpk pack (Windows)
+        shell: pwsh
+        run: |
+          vpk pack `
+            --packId      AuraInstaller `
+            --packDir     "${{ env.BUILD_DIR }}\PkgSrc" `
+            --packVersion "${{ env.APP_VERSION }}" `
+            --outputDir   "${{ env.PACK_DIR }}" `
+            --icon        "Installer\logo.ico" `
+            --mainExe     "AuraInstaller.exe"
+
+      - name: Publier sur GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            ${{ env.PACK_DIR }}\AuraInstaller-*-win-Setup.exe
+            ${{ env.PACK_DIR }}\AuraInstaller-*-full.nupkg
+            ${{ env.PACK_DIR }}\RELEASES
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Déployer sur build.sealion.fr (releases/win/)
+        shell: bash
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan build.sealion.fr >> ~/.ssh/known_hosts
+          rsync -avz \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
+            "VelopackOut/win/" \
+            deploy@build.sealion.fr:/var/www/build.sealion.fr/releases/win/
+
+  # ================================================================
+  # JOB LINUX — AppImage Velopack
+  # ================================================================
+  build-linux:
+    runs-on: ubuntu-latest
+
+    env:
+      UNITY_ZIP_URL: "https://build.sealion.fr/updates/Aura.zip"
+      BUILD_DIR:     "BuildReady"
+      PACK_DIR:      "VelopackOut/linux"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Install Velopack CLI (vpk)
+        run: dotnet tool install -g vpk
+
+      - name: Dépendances système pour AppImage
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libfuse2 zsync
+
+      - name: Extraire la version depuis le tag
+        run: |
+          V="${{ github.ref_name }}"; V="${V#v}"
+          echo "APP_VERSION=$V" >> $GITHUB_ENV
+
+      - name: Restore & publish (linux-x64, self-contained)
+        run: |
+          dotnet restore Updater/AuraInstaller.sln
+          dotnet publish Updater/AuraInstaller.csproj \
+            -c Release -r linux-x64 --self-contained true \
+            -o "${{ env.BUILD_DIR }}/Updater"
+
+      - name: Télécharger le build Unity
+        run: |
+          curl -L "${{ env.UNITY_ZIP_URL }}" -o unity.zip
+          unzip -q unity.zip -d "${{ env.BUILD_DIR }}/Game"
+
+      - name: Fusionner Updater + Game dans le dossier source du paquet
+        run: |
+          PKG="${{ env.BUILD_DIR }}/PkgSrc"
+          mkdir -p "$PKG"
+          cp -r "${{ env.BUILD_DIR }}/Updater/." "$PKG/"
+          cp -r "${{ env.BUILD_DIR }}/Game/." "$PKG/"
+          echo "0.0.0" > "$PKG/version.txt"
+          chmod +x "$PKG/AuraInstaller" || true
+
+      - name: vpk pack (Linux AppImage)
+        run: |
+          vpk pack \
+            --packId      AuraInstaller \
+            --packDir     "${{ env.BUILD_DIR }}/PkgSrc" \
+            --packVersion "${{ env.APP_VERSION }}" \
+            --outputDir   "${{ env.PACK_DIR }}" \
+            --mainExe     "AuraInstaller"
+
+      - name: Publier sur GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            ${{ env.PACK_DIR }}/AuraInstaller-*-linux-Portable.AppImage
+            ${{ env.PACK_DIR }}/AuraInstaller-*-full.nupkg
+            ${{ env.PACK_DIR }}/RELEASES
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Déployer sur build.sealion.fr (releases/linux/)
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan build.sealion.fr >> ~/.ssh/known_hosts
+          rsync -avz \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
+            "${{ env.PACK_DIR }}/" \
+            deploy@build.sealion.fr:/var/www/build.sealion.fr/releases/linux/
