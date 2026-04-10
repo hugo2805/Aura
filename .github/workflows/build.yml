@@ -90,13 +90,17 @@ jobs:
             --icon        "Installer\logo.ico" `
             --mainExe     "AuraInstaller.exe"
 
+      - name: Lister les fichiers générés (debug)
+        shell: pwsh
+        run: Get-ChildItem -Recurse "${{ env.PACK_DIR }}" | Select-Object FullName, Length
+
       - name: Publier sur GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           files: |
-            ${{ env.PACK_DIR }}\AuraInstaller-Setup.exe
-            ${{ env.PACK_DIR }}\AuraInstaller-*-full.nupkg
+            ${{ env.PACK_DIR }}\*Setup.exe
+            ${{ env.PACK_DIR }}\*-full.nupkg
             ${{ env.PACK_DIR }}\RELEASES
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
