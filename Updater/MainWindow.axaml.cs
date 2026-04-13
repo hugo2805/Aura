@@ -17,7 +17,7 @@ public partial class MainWindow : Window
 
     private static readonly string localExe = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
         ? "Aura.x86_64"
-        : "AURA - Prototype";
+        : "AURA.exe";
 
     // Répertoire de données utilisateur (hors AppImage, donc writable)
     private static readonly string DataDir = GetDataDirectory();

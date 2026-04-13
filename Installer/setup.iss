@@ -46,9 +46,13 @@ Name: "desktopicon"; \
   Flags: unchecked
 
 [Files]
-; Launcher self-contained (binaire unique, pas de dépendances externes)
+; Launcher (binaire self-contained)
 Source: "{#MyBuildDir}\Updater\AuraInstaller.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
+
+; Jeu Unity → installé dans %LocalAppData%\Aura\ (DataDir du launcher)
+Source: "{#MyBuildDir}\Game\*"; DestDir: "{localappdata}\Aura"; \
+  Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 ; Menu Démarrer → recherche Windows
@@ -73,3 +77,12 @@ Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\AuraIns
 Filename: "{app}\{#AppExeName}"; \
   Description: "Lancer {#AppName}"; \
   Flags: nowait postinstall skipifsilent
+
+[Code]
+// Écrit version.txt dans DataDir pour que le launcher sache que le jeu est déjà installé
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    SaveStringToFile(ExpandConstant('{localappdata}\Aura\version.txt'),
+      '{#AppVersion}', False);
+end;

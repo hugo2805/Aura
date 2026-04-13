@@ -34,7 +34,8 @@ jobs:
     runs-on: windows-latest
 
     env:
-      BUILD_DIR: "BuildReady"
+      UNITY_ZIP_URL: "https://build.sealion.fr/updates/win/Aura.zip"
+      BUILD_DIR:     "BuildReady"
 
     steps:
       - name: Checkout
@@ -58,6 +59,12 @@ jobs:
           dotnet publish Updater/AuraInstaller.csproj `
             -c Release -r win-x64 --self-contained true `
             -o "${{ env.BUILD_DIR }}\Updater"
+
+      - name: Télécharger le build Unity Windows
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "${{ env.UNITY_ZIP_URL }}" -OutFile unity.zip
+          Expand-Archive -Path unity.zip -DestinationPath "${{ env.BUILD_DIR }}\Game" -Force
 
       - name: Compiler l'installeur InnoSetup
         shell: pwsh
