@@ -97,8 +97,9 @@ public partial class MainWindow : Window
             using (HttpClient hc = new())
                 remote = (await hc.GetStringAsync(remoteVersionUrl)).Trim();
 
+            string gameExe = Path.Combine(DataDir, localExe);
             Status.Text = $"Locale {current} / Distante {remote}";
-            if (current == remote) { LaunchApp(); return; }
+            if (current == remote && File.Exists(gameExe)) { LaunchApp(); return; }
 
             Status.Text = "Téléchargement…";
             string tmpZip = Path.Combine(Path.GetTempPath(), "Aura_Update.zip");
@@ -108,6 +109,7 @@ public partial class MainWindow : Window
             ZipFile.ExtractToDirectory(tmpZip, DataDir, true);
             File.Delete(tmpZip);
             File.WriteAllText(versionFile, remote);
+            SetGameExecutable();
 
             Status.Text = "Mise à jour terminée – lancement…";
             await Task.Delay(400);
@@ -151,9 +153,31 @@ public partial class MainWindow : Window
         Pct.Text = $"{pct:P0}";
     }
 
+    private void SetGameExecutable()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return;
+        try
+        {
+#pragma warning disable CA1416
+            string exe = Path.Combine(DataDir, localExe);
+            if (File.Exists(exe))
+                File.SetUnixFileMode(exe,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                    UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                    UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+#pragma warning restore CA1416
+        }
+        catch { /* non-fatal */ }
+    }
+
     private void LaunchApp()
     {
-        Process.Start(Path.Combine(DataDir, localExe));
+        var psi = new ProcessStartInfo(Path.Combine(DataDir, localExe))
+        {
+            UseShellExecute = false,
+            WorkingDirectory = DataDir,
+        };
+        Process.Start(psi);
         ShutdownApp();
     }
 
