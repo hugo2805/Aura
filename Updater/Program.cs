@@ -13,7 +13,7 @@ internal sealed class Program
     public static void Main(string[] args)
     {
         VelopackApp.Build()
-            .WithInstall(_ => OnInstall())
+            .WithFirstRun(_ => OnInstall())
             .WithUninstall(_ => OnUninstall())
             .Run();
 
@@ -111,9 +111,11 @@ internal sealed class Program
     {
         try
         {
+#pragma warning disable CA1416
             File.SetUnixFileMode(path,
                 UnixFileMode.UserRead  | UnixFileMode.UserWrite  | UnixFileMode.UserExecute |
                 UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+#pragma warning restore CA1416
         }
         catch { /* non-fatal */ }
     }
