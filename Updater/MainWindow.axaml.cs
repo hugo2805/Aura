@@ -46,9 +46,95 @@ public partial class MainWindow : Window
         InitializeComponent();
         Opened += async (_, _) =>
         {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                EnsureDesktopIntegration();
             await CheckForSelfUpdate();
             await CheckAndUpdate();
         };
+    }
+
+    // -------------------------------------------------------------------------
+    // Intégration bureau Linux — crée le .desktop au premier lancement
+    // -------------------------------------------------------------------------
+    private static void EnsureDesktopIntegration()
+    {
+        try
+        {
+            string home     = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string menuFile = Path.Combine(home, ".local", "share", "applications", "aura.desktop");
+            if (File.Exists(menuFile)) return; // déjà installé
+
+            // Chemin réel de l'exécutable : variable APPIMAGE si on tourne en AppImage,
+            // sinon le binaire installé par Velopack
+            string execPath = Environment.GetEnvironmentVariable("APPIMAGE")
+                              ?? Environment.ProcessPath
+                              ?? string.Empty;
+            if (string.IsNullOrEmpty(execPath)) return;
+
+            // Copie l'icône dans DataDir (accessible en écriture) si besoin
+            string iconPath = Path.Combine(DataDir, "logo.png");
+            if (!File.Exists(iconPath))
+            {
+                // logo.png est embarqué dans le AppImage (AppDir/logo.png)
+                string appDir    = Environment.GetEnvironmentVariable("APPDIR") ?? string.Empty;
+                string bundled   = Path.Combine(appDir, "logo.png");
+                if (File.Exists(bundled)) File.Copy(bundled, iconPath, overwrite: false);
+            }
+
+            string content = $"""
+                [Desktop Entry]
+                Name=Aura
+                Comment=Assistant d'Urgence et de Régulation de l'Alerte
+                Exec={execPath}
+                Icon={iconPath}
+                Type=Application
+                Categories=Game;Utility;
+                Terminal=false
+                StartupNotify=true
+                """;
+
+            Directory.CreateDirectory(Path.Combine(home, ".local", "share", "applications"));
+            File.WriteAllText(menuFile, content);
+#pragma warning disable CA1416
+            File.SetUnixFileMode(menuFile,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+#pragma warning restore CA1416
+
+            // Raccourci Bureau
+            string desktopDir = GetDesktopDir(home);
+            if (!string.IsNullOrEmpty(desktopDir))
+            {
+                string shortcut = Path.Combine(desktopDir, "aura.desktop");
+                File.WriteAllText(shortcut, content);
+#pragma warning disable CA1416
+                File.SetUnixFileMode(shortcut,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                    UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+#pragma warning restore CA1416
+            }
+        }
+        catch { /* non-fatal */ }
+    }
+
+    private static string GetDesktopDir(string home)
+    {
+        string userDirsFile = Path.Combine(home, ".config", "user-dirs.dirs");
+        if (File.Exists(userDirsFile))
+        {
+            foreach (string line in File.ReadAllLines(userDirsFile))
+            {
+                if (!line.StartsWith("XDG_DESKTOP_DIR=")) continue;
+                string val = line.Split('=', 2)[1].Trim().Trim('"').Replace("$HOME", home);
+                if (Directory.Exists(val)) return val;
+            }
+        }
+        foreach (string name in new[] { "Desktop", "Bureau", "Escritorio" })
+        {
+            string dir = Path.Combine(home, name);
+            if (Directory.Exists(dir)) return dir;
+        }
+        return string.Empty;
     }
 
     // -------------------------------------------------------------------------
