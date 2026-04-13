@@ -64,7 +64,7 @@ jobs:
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
             /DAppVersion="${{ env.APP_VERSION }}" `
-            /DMyBuildDir="${{ env.BUILD_DIR }}" `
+            /DMyBuildDir="${{ github.workspace }}\${{ env.BUILD_DIR }}" `
             "Installer\setup.iss"
 
       - name: Lister les fichiers générés (debug)
