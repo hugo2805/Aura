@@ -34,7 +34,7 @@ jobs:
     runs-on: windows-latest
 
     env:
-      UNITY_ZIP_URL: "https://build.sealion.fr/updates/Aura.zip"
+      UNITY_ZIP_URL: "https://build.sealion.fr/updates/win/Aura.zip"
       BUILD_DIR:     "BuildReady"
       PACK_DIR:      "VelopackOut\\win"
 
@@ -113,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      UNITY_ZIP_URL: "https://build.sealion.fr/updates/Aura.zip"
+      UNITY_ZIP_URL: "https://build.sealion.fr/updates/linux/Aura.zip"
       BUILD_DIR:     "BuildReady"
       PACK_DIR:      "VelopackOut/linux"
 
