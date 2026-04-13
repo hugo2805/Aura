@@ -13,8 +13,8 @@ internal sealed class Program
     public static void Main(string[] args)
     {
         VelopackApp.Build()
-            .WithFirstRun(_ => OnInstall())
-            .WithUninstall(_ => OnUninstall())
+            .OnAfterInstallFastCallback(_ => OnInstall())
+            .OnBeforeUninstallFastCallback(_ => OnUninstall())
             .Run();
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
