@@ -55,33 +55,48 @@ public partial class MainWindow : Window
 
     // -------------------------------------------------------------------------
     // Intégration bureau Linux — crée le .desktop au premier lancement
+    // et copie l'AppImage dans ~/.local/bin/ pour qu'il survive
+    // à la suppression du dossier Téléchargements.
     // -------------------------------------------------------------------------
     private static void EnsureDesktopIntegration()
     {
         try
         {
-            string home     = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            string menuFile = Path.Combine(home, ".local", "share", "applications", "aura.desktop");
-            if (File.Exists(menuFile)) return; // déjà installé
+            string home        = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string binDir      = Path.Combine(home, ".local", "bin");
+            string permanentAppImage = Path.Combine(binDir, "AuraInstaller.AppImage");
 
-            // Chemin réel de l'exécutable : variable APPIMAGE si on tourne en AppImage,
-            // sinon le binaire installé par Velopack
-            string execPath = Environment.GetEnvironmentVariable("APPIMAGE")
-                              ?? Environment.ProcessPath
-                              ?? string.Empty;
-            if (string.IsNullOrEmpty(execPath)) return;
+            // Chemin de l'AppImage en cours d'exécution (set par le runtime AppImage)
+            string currentAppImage = Environment.GetEnvironmentVariable("APPIMAGE") ?? string.Empty;
 
-            // Copie l'icône dans DataDir (accessible en écriture) si besoin
+            // Si on tourne depuis l'AppImage et que ce n'est pas déjà la copie permanente :
+            // on copie dans ~/.local/bin/ pour ne pas dépendre du dossier Téléchargements
+            if (!string.IsNullOrEmpty(currentAppImage) &&
+                !string.Equals(currentAppImage, permanentAppImage, StringComparison.OrdinalIgnoreCase))
+            {
+                Directory.CreateDirectory(binDir);
+                File.Copy(currentAppImage, permanentAppImage, overwrite: true);
+#pragma warning disable CA1416
+                File.SetUnixFileMode(permanentAppImage,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                    UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                    UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+#pragma warning restore CA1416
+            }
+
+            // Exec= pointe toujours sur la copie permanente
+            string execPath = permanentAppImage;
+
+            // Icône : copiée depuis l'AppDir dans DataDir (chemin writable persistant)
             string iconPath = Path.Combine(DataDir, "logo.png");
             if (!File.Exists(iconPath))
             {
-                // logo.png est embarqué dans le AppImage (AppDir/logo.png)
-                string appDir    = Environment.GetEnvironmentVariable("APPDIR") ?? string.Empty;
-                string bundled   = Path.Combine(appDir, "logo.png");
+                string appDir  = Environment.GetEnvironmentVariable("APPDIR") ?? string.Empty;
+                string bundled = Path.Combine(appDir, "logo.png");
                 if (File.Exists(bundled)) File.Copy(bundled, iconPath, overwrite: false);
             }
 
-            string content = $"""
+            string desktopContent = $"""
                 [Desktop Entry]
                 Name=Aura
                 Comment=Assistant d'Urgence et de Régulation de l'Alerte
@@ -93,8 +108,12 @@ public partial class MainWindow : Window
                 StartupNotify=true
                 """;
 
-            Directory.CreateDirectory(Path.Combine(home, ".local", "share", "applications"));
-            File.WriteAllText(menuFile, content);
+            // Menu applicatif (créé une seule fois)
+            string appsDir  = Path.Combine(home, ".local", "share", "applications");
+            string menuFile = Path.Combine(appsDir, "aura.desktop");
+            if (File.Exists(menuFile)) return;
+            Directory.CreateDirectory(appsDir);
+            File.WriteAllText(menuFile, desktopContent);
 #pragma warning disable CA1416
             File.SetUnixFileMode(menuFile,
                 UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
@@ -106,7 +125,7 @@ public partial class MainWindow : Window
             if (!string.IsNullOrEmpty(desktopDir))
             {
                 string shortcut = Path.Combine(desktopDir, "aura.desktop");
-                File.WriteAllText(shortcut, content);
+                File.WriteAllText(shortcut, desktopContent);
 #pragma warning disable CA1416
                 File.SetUnixFileMode(shortcut,
                     UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
