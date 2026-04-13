@@ -28,15 +28,13 @@ permissions:
 jobs:
 
   # ================================================================
-  # JOB WINDOWS — Setup.exe Velopack
+  # JOB WINDOWS — Wizard InnoSetup (Program Files + Start Menu + Bureau)
   # ================================================================
   build-windows:
     runs-on: windows-latest
 
     env:
-      UNITY_ZIP_URL: "https://build.sealion.fr/updates/win/Aura.zip"
-      BUILD_DIR:     "BuildReady"
-      PACK_DIR:      "VelopackOut\\win"
+      BUILD_DIR: "BuildReady"
 
     steps:
       - name: Checkout
@@ -47,9 +45,6 @@ jobs:
         with:
           dotnet-version: "9.0.x"
 
-      - name: Install Velopack CLI (vpk)
-        run: dotnet tool install -g vpk
-
       - name: Extraire la version depuis le tag (v1.2.3 → 1.2.3)
         shell: pwsh
         run: |
@@ -57,51 +52,30 @@ jobs:
           echo "APP_VERSION=$v" | Out-File -FilePath $Env:GITHUB_ENV -Append
 
       - name: Restore & publish (win-x64, self-contained)
+        shell: pwsh
         run: |
           dotnet restore Updater/AuraInstaller.sln
           dotnet publish Updater/AuraInstaller.csproj `
             -c Release -r win-x64 --self-contained true `
             -o "${{ env.BUILD_DIR }}\Updater"
 
-      - name: Télécharger le build Unity
+      - name: Compiler l'installeur InnoSetup
         shell: pwsh
         run: |
-          Invoke-WebRequest -Uri "${{ env.UNITY_ZIP_URL }}" -OutFile unity.zip
-          Expand-Archive -Path unity.zip -DestinationPath "${{ env.BUILD_DIR }}\Game" -Force
-
-      - name: Fusionner Updater + Game dans le dossier source du paquet
-        shell: pwsh
-        run: |
-          $pkg = "${{ env.BUILD_DIR }}\PkgSrc"
-          New-Item -ItemType Directory -Force -Path $pkg
-          Copy-Item "${{ env.BUILD_DIR }}\Updater\*" $pkg -Recurse -Force
-          Copy-Item "${{ env.BUILD_DIR }}\Game\*"    $pkg -Recurse -Force
-          # version.txt du jeu (pas du launcher — géré par Velopack séparément)
-          Set-Content -Path "$pkg\version.txt" -Value "0.0.0"
-
-      - name: vpk pack (Windows)
-        shell: pwsh
-        run: |
-          vpk pack `
-            --packId      AuraInstaller `
-            --packDir     "${{ env.BUILD_DIR }}\PkgSrc" `
-            --packVersion "${{ env.APP_VERSION }}" `
-            --outputDir   "${{ env.PACK_DIR }}" `
-            --icon        "Installer\logo.ico" `
-            --mainExe     "AuraInstaller.exe"
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            /DAppVersion="${{ env.APP_VERSION }}" `
+            /DMyBuildDir="${{ env.BUILD_DIR }}" `
+            "Installer\setup.iss"
 
       - name: Lister les fichiers générés (debug)
         shell: pwsh
-        run: Get-ChildItem -Recurse "${{ env.PACK_DIR }}" | Select-Object FullName, Length
+        run: Get-ChildItem -Recurse "Installer\Output" | Select-Object FullName, Length
 
       - name: Publier sur GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: |
-            ${{ env.PACK_DIR }}\*Setup.exe
-            ${{ env.PACK_DIR }}\*-full.nupkg
-            ${{ env.PACK_DIR }}\RELEASES
+          files: Installer\Output\Aura_Setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

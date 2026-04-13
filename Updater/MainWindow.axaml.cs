@@ -24,9 +24,11 @@ public partial class MainWindow : Window
 
     private static string GetDataDirectory()
     {
-        string dir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".local", "share", "Aura");
+        // Windows : %LocalAppData%\Aura  (writable, hors Program Files)
+        // Linux   : ~/.local/share/Aura
+        string dir = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Aura")
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share", "Aura");
         Directory.CreateDirectory(dir);
         return dir;
     }
