@@ -14,7 +14,10 @@ namespace AuraUpdater;
 public partial class MainWindow : Window
 {
     private const string remoteVersionUrl = "https://build.sealion.fr/updates/version.txt";
-    private const string localExe         = "AURA - Prototype";
+
+    private static readonly string localExe = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
+        ? "Aura.x86_64"
+        : "AURA - Prototype";
 
     // Répertoire de données utilisateur (hors AppImage, donc writable)
     private static readonly string DataDir = GetDataDirectory();
