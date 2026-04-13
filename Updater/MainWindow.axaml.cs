@@ -87,13 +87,19 @@ public partial class MainWindow : Window
             // Exec= pointe toujours sur la copie permanente
             string execPath = permanentAppImage;
 
-            // Icône : copiée depuis l'AppDir dans DataDir (chemin writable persistant)
+            // Icône : extraite depuis la ressource Avalonia embarquée dans le binaire
+            // → fonctionne quel que soit l'emplacement de l'AppImage
             string iconPath = Path.Combine(DataDir, "logo.png");
             if (!File.Exists(iconPath))
             {
-                string appDir  = Environment.GetEnvironmentVariable("APPDIR") ?? string.Empty;
-                string bundled = Path.Combine(appDir, "logo.png");
-                if (File.Exists(bundled)) File.Copy(bundled, iconPath, overwrite: false);
+                try
+                {
+                    using var stream = Avalonia.Platform.AssetLoader.Open(
+                        new Uri("avares://AuraInstaller/Assets/logo.png"));
+                    using var file = File.Create(iconPath);
+                    stream.CopyTo(file);
+                }
+                catch { /* icône non critique */ }
             }
 
             string desktopContent = $"""
