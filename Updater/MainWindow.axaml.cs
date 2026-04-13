@@ -16,6 +16,18 @@ public partial class MainWindow : Window
     private const string remoteVersionUrl = "https://build.sealion.fr/updates/version.txt";
     private const string localExe         = "AURA - Prototype";
 
+    // Répertoire de données utilisateur (hors AppImage, donc writable)
+    private static readonly string DataDir = GetDataDirectory();
+
+    private static string GetDataDirectory()
+    {
+        string dir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".local", "share", "Aura");
+        Directory.CreateDirectory(dir);
+        return dir;
+    }
+
     // ZIP du jeu Unity — build différent par plateforme
     private static readonly string remoteZipUrl = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
         ? "https://build.sealion.fr/updates/win/Aura.zip"
@@ -77,8 +89,9 @@ public partial class MainWindow : Window
     {
         try
         {
-            if (!File.Exists("version.txt")) File.WriteAllText("version.txt", "0.0.0");
-            string current = File.ReadAllText("version.txt").Trim();
+            string versionFile = Path.Combine(DataDir, "version.txt");
+            if (!File.Exists(versionFile)) File.WriteAllText(versionFile, "0.0.0");
+            string current = File.ReadAllText(versionFile).Trim();
 
             string remote;
             using (HttpClient hc = new())
@@ -92,9 +105,9 @@ public partial class MainWindow : Window
             await DownloadWithProgress(remoteZipUrl, tmpZip);
 
             Status.Text = "Extraction…";
-            ZipFile.ExtractToDirectory(tmpZip, AppDomain.CurrentDomain.BaseDirectory, true);
+            ZipFile.ExtractToDirectory(tmpZip, DataDir, true);
             File.Delete(tmpZip);
-            File.WriteAllText("version.txt", remote);
+            File.WriteAllText(versionFile, remote);
 
             Status.Text = "Mise à jour terminée – lancement…";
             await Task.Delay(400);
@@ -140,7 +153,7 @@ public partial class MainWindow : Window
 
     private void LaunchApp()
     {
-        Process.Start(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, localExe));
+        Process.Start(Path.Combine(DataDir, localExe));
         ShutdownApp();
     }
 

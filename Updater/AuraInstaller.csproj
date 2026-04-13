@@ -28,6 +28,8 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets\Aiguille.png" />
     <AvaloniaResource Include="Assets\bkgd.png" />
+    <!-- Icône Linux déployée en loose file (utilisée par le .desktop) -->
+    <Content Include="..\Installer\logo.png" CopyToOutputDirectory="PreserveNewest" Link="logo.png" />
   </ItemGroup>
 
 </Project>
